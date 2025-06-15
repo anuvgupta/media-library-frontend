@@ -1,5 +1,5 @@
 {
-    "package": "image-gen-frontend",
+    "package": "media-library-frontend",
     "targets": {
         "build": "npm run build",
         "start": "npm run start",
