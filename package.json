@@ -18,7 +18,8 @@
         "@aws-sdk/client-cognito-identity": "^3.726.1",
         "@aws-sdk/credential-providers": "^3.726.1",
         "@aws-sdk/protocol-http": "^3.370.0",
-        "@aws-sdk/signature-v4": "^3.370.0"
+        "@aws-sdk/signature-v4": "^3.370.0",
+        "hls.js": "^1.6.5"
     },
     "devDependencies": {
         "@babel/core": "^7.26.0",
