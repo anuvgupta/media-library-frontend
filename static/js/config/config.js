@@ -17,10 +17,8 @@ export const CONFIG = {
     identityPoolId: "us-east-1:570a2eb4-5ca1-45e9-af46-bd0fa187f7fc",
 
     // API Gateway endpoint URL (from CDK output: ApiUrl or custom domain)
-    apiEndpoint: "https://fq2nypgsf8.execute-api.us-east-1.amazonaws.com/dev",
-
     // Optional: Custom API domain (if you set up custom domain for API)
-    // apiEndpoint: 'https://api.yourdomain.com'
+    apiEndpoint: "https://media-api-dev.anuv.me",
 };
 
 // Example of how to get these values from your CDK deployment:
