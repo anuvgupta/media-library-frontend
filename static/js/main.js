@@ -48,6 +48,9 @@ class MediaLibraryApp {
         document
             .getElementById("get-playlist-btn")
             .addEventListener("click", () => this.getPlaylist());
+        document
+            .getElementById("share-library-btn")
+            .addEventListener("click", () => this.shareLibrary());
 
         // Enter key handlers
         document
@@ -565,6 +568,47 @@ class MediaLibraryApp {
         }
 
         return await response.json();
+    }
+
+    async shareLibrary() {
+        const ownerId = document.getElementById("owner-id-input").value.trim();
+        const shareWith = document
+            .getElementById("share-with-input")
+            .value.trim();
+        // const permissions = document.getElementById("share-permissions").value;
+
+        if (!ownerId || !shareWith) {
+            this.showStatus(
+                "Please enter Owner ID and username/email to share with",
+                "error"
+            );
+            return;
+        }
+
+        const button = document.getElementById("share-library-btn");
+        const originalText = button.textContent;
+        button.innerHTML = '<span class="loading"></span>Sharing...';
+        button.disabled = true;
+
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "POST",
+                `/libraries/${ownerId}/share`,
+                {
+                    shareWithIdentifier: shareWith,
+                    permissions: "read",
+                }
+            );
+            this.displayApiResponse("Share Library", result);
+            this.showStatus("Library shared successfully!", "success");
+        } catch (error) {
+            this.displayApiResponse("Share Library Error", {
+                error: error.message,
+            });
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
     }
 
     getErrorMessage(error) {
