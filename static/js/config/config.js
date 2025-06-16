@@ -1,4 +1,39 @@
-// // config.js
+// config.js
+
+// Configuration file for Media Library Frontend
+// Update these values with your actual CDK stack outputs
+
+export const CONFIG = {
+    // AWS Region where your resources are deployed
+    region: "us-east-1",
+
+    // Cognito User Pool ID (from CDK output: UserPoolId)
+    userPoolId: "us-east-1_7PxCwRosi",
+
+    // Cognito User Pool Web Client ID (from CDK output: UserPoolClientId)
+    userPoolWebClientId: "jd5ta6pde3j5sl2fhl11qgodh",
+
+    // Cognito Identity Pool ID (from CDK output: IdentityPoolId)
+    identityPoolId: "us-east-1:570a2eb4-5ca1-45e9-af46-bd0fa187f7fc",
+
+    // API Gateway endpoint URL (from CDK output: ApiUrl or custom domain)
+    apiEndpoint: "https://fq2nypgsf8.execute-api.us-east-1.amazonaws.com/dev",
+
+    // Optional: Custom API domain (if you set up custom domain for API)
+    // apiEndpoint: 'https://api.yourdomain.com'
+};
+
+// Example of how to get these values from your CDK deployment:
+/*
+After deploying your CDK stack, you'll see outputs like:
+
+MediaLibraryStack.UserPoolId = us-west-2_AbC123DeF
+MediaLibraryStack.UserPoolClientId = 1a2b3c4d5e6f7g8h9i0j1k2l3m
+MediaLibraryStack.IdentityPoolId = us-west-2:12345678-1234-1234-1234-123456789012
+MediaLibraryStack.ApiUrl = https://abc123def4.execute-api.us-west-2.amazonaws.com/prod/
+
+Copy these values into the CONFIG object above.
+*/
 
 // /* constants */
 // export const CHECK_BUCKET_FIRST = true;

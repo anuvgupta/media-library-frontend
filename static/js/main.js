@@ -1,715 +1,631 @@
-// // main.js
+import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
+import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
+import { SignatureV4 } from "@aws-sdk/signature-v4";
+import { HttpRequest } from "@aws-sdk/protocol-http";
+import { Sha256 } from "@aws-crypto/sha256-js";
+import { CONFIG } from "./config/config.js";
 
-// import {
-//     initializeApiClient,
-//     generateImage,
-//     getJobStatus,
-// } from "./api/api-client.js";
-// import * as utils from "./util/utils.js";
-// import * as config from "./config/config.js";
-// import * as themeSystem from "./theme/system.js";
-
-// /* memory */
-// let currentJobId = null;
-// let pollingInterval = null;
-
-// /* ui elements */
-// const elements = {
-//     promptInput: document.getElementById("promptInput"),
-//     workflowSelect: document.getElementById("workflowSelect"),
-//     generateBtn: document.getElementById("generateBtn"),
-//     errorMessage: document.getElementById("errorMessage"),
-//     progressContainer: document.getElementById("progressContainer"),
-//     progressFill: document.getElementById("progressFill"),
-//     progressStatus: document.getElementById("progressStatus"),
-//     statusDetails: document.getElementById("statusDetails"),
-//     imagePlaceholder: document.getElementById("imagePlaceholder"),
-//     generatedImage: document.getElementById("generatedImage"),
-//     loadingSpinner: document.getElementById("loadingSpinner"),
-//     placeholderText: document.getElementById("placeholderText"),
-//     aspectRatioSelect: document.getElementById("aspectRatioSelect"),
-// };
-
-// /* ui methods */
-// const setLoading = (loading) => {
-//     elements.generateBtn.disabled = loading;
-//     showProgressSection();
-// };
-
-// const showPlaceholder = () => {
-//     elements.placeholderText.style.display = "block";
-//     elements.placeholderText.innerHTML = config.PLACEHOLDER_TEXT;
-// };
-
-// const hidePlaceholder = () => {
-//     elements.placeholderText.style.display = "none";
-// };
-
-// const showProgressSection = () => {
-//     elements.progressContainer.style.display = "block";
-// };
-
-// const hideProgressSection = () => {
-//     elements.progressContainer.style.display = "none";
-// };
-
-// const resetProgressSection = () => {
-//     elements.progressFill.style.width = "0%";
-//     elements.progressStatus.textContent = "Loading...";
-//     elements.statusDetails.innerHTML = "&nbsp;";
-// };
-
-// const showError = (message = config.DEFAULT_ERROR_MESSAGE) => {
-//     elements.errorMessage.textContent = message;
-//     elements.errorMessage.style.display = "block";
-//     elements.loadingSpinner.style.display = "none";
-//     hideProgressSection();
-// };
-
-// const hideError = () => {
-//     elements.errorMessage.style.display = "none";
-// };
-
-// const displayImage = (imageData) => {
-//     elements.generatedImage.src = utils.isBase64(imageData)
-//         ? utils.getBase64Image(imageData)
-//         : utils.getImageUrl(imageData);
-//     elements.generatedImage.style.display = "block";
-//     elements.imagePlaceholder.style.display = "none";
-//     elements.loadingSpinner.style.display = "none";
-//     showPlaceholder();
-// };
-
-// const updateProgress = (progressData) => {
-//     elements.progressFill.style.width = `${progressData.value}%`;
-//     elements.progressStatus.textContent = progressData.status;
-//     elements.statusDetails.textContent = progressData.details;
-// };
-
-// /* app methods */
-// const initializeApi = async () => {
-//     initializeApiClient(
-//         config.getCognitoIdentityPoolId(),
-//         config.getAwsRegion(),
-//         config.getBaseUrl()
-//     ).catch(console.error);
-// };
-
-// const updateUrlWithParams = (jobId, prompt, model) => {
-//     const url = new URL(window.location);
-//     if (jobId) {
-//         url.searchParams.set("i", jobId);
-//     } else {
-//         url.searchParams.delete("i");
-//     }
-//     if (prompt) {
-//         url.searchParams.set("p", prompt);
-//     } else if (!jobId) {
-//         // Only remove prompt if we're also removing job ID
-//         url.searchParams.delete("p");
-//     }
-//     if (model) {
-//         url.searchParams.set("m", model);
-//     } else {
-//         // Keep the model parameter unless explicitly cleared
-//         const currentModel = url.searchParams.get("m");
-//         if (!currentModel) {
-//             url.searchParams.set("m", elements.workflowSelect.value);
-//         }
-//     }
-//     url.searchParams.set("ar", elements.aspectRatioSelect.value);
-//     window.history.pushState({}, "", url);
-// };
-
-// const checkDirectImageAccess = async (jobId) => {
-//     try {
-//         const response = await fetch(`/output/${jobId}.png`, {
-//             method: "HEAD", // Use HEAD request to check existence without downloading
-//         });
-
-//         if (response.ok) {
-//             // Image exists, display it with expiring message
-//             displayImage(`/output/${jobId}.png`);
-//             updateProgress(config.EXPIRING_PROGRESS_STATE);
-//             setLoading(false); // Enable the generate button
-//             clearInterval(pollingInterval); // Clear any existing polling
-//             return true;
-//         }
-//         return false;
-//     } catch (error) {
-//         console.error(error);
-//         return false;
-//     }
-// };
-
-// const startPolling = (jobId) => {
-//     currentJobId = jobId;
-//     if (pollingInterval) clearInterval(pollingInterval);
-//     setLoading(true);
-//     hidePlaceholder();
-//     hideError();
-//     elements.generatedImage.style.display = "none";
-//     elements.imagePlaceholder.style.display = "flex";
-//     elements.loadingSpinner.style.display = "flex";
-//     elements.placeholderText.style.display = "none";
-//     pollingInterval = setInterval(() => pollStatus(jobId), 2000);
-// };
-
-// const pollStatus = async (jobId) => {
-//     try {
-//         const response = await getJobStatus(jobId);
-
-//         switch (response.status) {
-//             case "IN_QUEUE":
-//                 updateProgress(config.QUEUED_PROGRESS_STATE);
-//                 break;
-//             case "IN_PROGRESS":
-//                 updateProgress(utils.extractProgress(response));
-//                 break;
-//             case "COMPLETED":
-//                 if (response.output === "ERROR") {
-//                     throw new Error(response.error || "Generation failed");
-//                 }
-//                 updateProgress(config.COMPLETED_PROGRESS_STATE);
-//                 clearInterval(pollingInterval);
-//                 setLoading(false);
-//                 hidePlaceholder();
-//                 if (typeof response.output === "string") {
-//                     displayImage(response.output);
-//                 }
-//                 break;
-//             case "FAILED":
-//                 throw new Error(response.error || "Generation failed");
-//         }
-//     } catch (error) {
-//         let errorMessage = config.DEFAULT_ERROR_MESSAGE;
-
-//         // Check specifically for WAF throttling
-//         if (utils.isFirewallThrottlingError(error)) {
-//             errorMessage = config.FIREWALL_THROTTLING_ERROR_MESSAGE;
-//         } else if (utils.is404Error(error)) {
-//             if (config.CHECK_BUCKET_FIRST) {
-//                 errorMessage = "Image not found! Images expire after a day.";
-//             } else {
-//                 // If the SDK throws a 404 error, try direct image access
-//                 const imageExists = await checkDirectImageAccess(jobId);
-//                 if (!imageExists) {
-//                     errorMessage =
-//                         "Image not found! Images expire after a day.";
-//                 }
-//             }
-//         }
-
-//         console.error(error);
-//         clearInterval(pollingInterval);
-//         setLoading(false);
-//         showPlaceholder();
-//         showError(errorMessage);
-//         updateUrlWithParams(null);
-//     }
-// };
-
-// const generateImageHandler = async () => {
-//     const prompt = elements.promptInput.value.trim();
-//     if (!prompt) return;
-
-//     resetProgressSection();
-//     setLoading(true);
-//     hidePlaceholder();
-//     hideError();
-//     elements.generatedImage.style.display = "none";
-//     elements.imagePlaceholder.style.display = "flex";
-//     elements.loadingSpinner.style.display = "flex";
-//     elements.placeholderText.style.display = "none";
-
-//     try {
-//         const response = await generateImage(
-//             prompt,
-//             elements.workflowSelect.value,
-//             elements.aspectRatioSelect.value
-//         );
-
-//         updateUrlWithParams(response.id, prompt, elements.workflowSelect.value);
-//         startPolling(response.id);
-//     } catch (error) {
-//         console.error("Error generating image:", error);
-//         setLoading(false);
-//         showPlaceholder();
-//         let errorMessage = config.DEFAULT_ERROR_MESSAGE;
-//         // Check specifically for WAF throttling
-//         if (utils.isFirewallThrottlingError(error)) {
-//             errorMessage = config.FIREWALL_THROTTLING_ERROR_MESSAGE;
-//         }
-//         showError(errorMessage);
-//     }
-// };
-
-// const loadParamsFromUrl = async () => {
-//     const urlParams = new URLSearchParams(window.location.search);
-//     const jobId = urlParams.get("i");
-//     const prompt = urlParams.get("p");
-//     const model = urlParams.get("m");
-//     const aspectRatio = urlParams.get("ar");
-
-//     if (prompt) {
-//         elements.promptInput.value = decodeURIComponent(prompt);
-//     }
-
-//     if (model && config.WORKFLOWS.some((w) => w.param === model)) {
-//         elements.workflowSelect.value = model;
-//     }
-
-//     if (aspectRatio) {
-//         elements.aspectRatioSelect.value = aspectRatio;
-//     }
-
-//     if (jobId) {
-//         if (config.CHECK_BUCKET_FIRST) {
-//             // Try to load image directly first
-//             const imageExists = await checkDirectImageAccess(jobId);
-//             if (!imageExists) {
-//                 // If direct image access fails, start polling
-//                 startPolling(jobId);
-//             }
-//         } else {
-//             startPolling(jobId);
-//         }
-//     } else {
-//         showPlaceholder();
-//     }
-// };
-
-// /* app initialization */
-// elements.generateBtn.addEventListener("click", generateImageHandler);
-// elements.promptInput.addEventListener("keypress", (event) => {
-//     if (event.key === "Enter" && !elements.generateBtn.disabled) {
-//         generateImageHandler();
-//     }
-// });
-
-// // Handle selection changes
-// elements.workflowSelect.addEventListener("change", () => {
-//     updateUrlWithParams(
-//         currentJobId,
-//         elements.promptInput.value,
-//         elements.workflowSelect.value
-//     );
-// });
-// elements.aspectRatioSelect.addEventListener("change", () => {
-//     updateUrlWithParams(
-//         currentJobId,
-//         elements.promptInput.value,
-//         elements.workflowSelect.value
-//     );
-// });
-
-// // Handle browser back/forward navigation
-// window.addEventListener("popstate", () => {
-//     loadParamsFromUrl();
-// });
-
-// // Populate options
-// const populateSelectOptions = (
-//     select,
-//     options,
-//     defaultValue,
-//     valueKey = "param",
-//     textKey = "name"
-// ) => {
-//     options.forEach((option) => {
-//         const existingOption = select.querySelector(
-//             `option[value="${option[valueKey]}"]`
-//         );
-//         if (existingOption) {
-//             select.removeChild(existingOption);
-//         }
-//         const newOption = document.createElement("option");
-//         newOption.value = option[valueKey];
-//         newOption.textContent = option[textKey];
-//         if (newOption.value === defaultValue) {
-//             newOption.selected = true;
-//         }
-//         select.appendChild(newOption);
-//     });
-// };
-// const initializeDropdowns = () => {
-//     populateSelectOptions(
-//         elements.workflowSelect,
-//         config.WORKFLOWS,
-//         config.DEFAULT_WORKFLOW
-//     );
-//     populateSelectOptions(
-//         elements.aspectRatioSelect,
-//         config.ASPECT_RATIOS,
-//         config.DEFAULT_ASPECT_RATIO
-//     );
-// };
-
-// // Main method
-// const main = () => {
-//     initializeDropdowns();
-//     loadParamsFromUrl();
-//     initializeApi();
-// };
-
-// // Entry point
-// if (document.readyState === "loading") {
-//     document.addEventListener("DOMContentLoaded", () => main());
-// } else {
-//     main();
-// }
-
-// Import HLS.js (make sure to install via npm: npm install hls.js)
-import Hls from "hls.js";
-
-class VideoStreamPlayer {
+class MediaLibraryApp {
     constructor() {
-        this.hls = null;
-        this.video = null;
-        this.isLoading = false;
-        this.stats = {
-            bytesLoaded: 0,
-            networkSpeed: 0,
-            bufferLength: 0,
+        this.currentUser = null;
+        this.cognitoIdentityClient = null;
+        this.credentials = null;
+        this.initializeEventListeners();
+        this.checkExistingSession();
+    }
+
+    initializeEventListeners() {
+        // Auth buttons
+        document
+            .getElementById("login-btn")
+            .addEventListener("click", () => this.handleLogin());
+        document
+            .getElementById("register-btn")
+            .addEventListener("click", () => this.showRegisterForm());
+        document
+            .getElementById("signup-btn")
+            .addEventListener("click", () => this.handleSignup());
+        document
+            .getElementById("back-to-login-btn")
+            .addEventListener("click", () => this.showLoginForm());
+        document
+            .getElementById("verify-btn")
+            .addEventListener("click", () => this.handleVerification());
+        document
+            .getElementById("resend-code-btn")
+            .addEventListener("click", () => this.resendVerificationCode());
+        document
+            .getElementById("logout-btn")
+            .addEventListener("click", () => this.handleLogout());
+
+        // API buttons
+        document
+            .getElementById("get-libraries-btn")
+            .addEventListener("click", () => this.getLibraries());
+        document
+            .getElementById("get-library-json-btn")
+            .addEventListener("click", () => this.getLibraryJson());
+        document
+            .getElementById("get-playlist-btn")
+            .addEventListener("click", () => this.getPlaylist());
+
+        // Enter key handlers
+        document
+            .getElementById("password")
+            .addEventListener("keypress", (e) => {
+                if (e.key === "Enter") this.handleLogin();
+            });
+        document
+            .getElementById("reg-password")
+            .addEventListener("keypress", (e) => {
+                if (e.key === "Enter") this.handleSignup();
+            });
+        document
+            .getElementById("verification-code")
+            .addEventListener("keypress", (e) => {
+                if (e.key === "Enter") this.handleVerification();
+            });
+    }
+
+    showStatus(message, type = "info") {
+        const statusElement = document.getElementById("status-message");
+        statusElement.className = `status ${type}`;
+        statusElement.textContent = message;
+        statusElement.classList.remove("hidden");
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            statusElement.classList.add("hidden");
+        }, 5000);
+    }
+
+    showLoginForm() {
+        document.getElementById("login-form").classList.remove("hidden");
+        document.getElementById("register-form").classList.add("hidden");
+        document.getElementById("verification-form").classList.add("hidden");
+    }
+
+    showRegisterForm() {
+        document.getElementById("login-form").classList.add("hidden");
+        document.getElementById("register-form").classList.remove("hidden");
+        document.getElementById("verification-form").classList.add("hidden");
+    }
+
+    showVerificationForm() {
+        document.getElementById("login-form").classList.add("hidden");
+        document.getElementById("register-form").classList.add("hidden");
+        document.getElementById("verification-form").classList.remove("hidden");
+    }
+
+    async checkExistingSession() {
+        try {
+            const accessToken = localStorage.getItem("accessToken");
+            const idToken = localStorage.getItem("idToken");
+            const refreshToken = localStorage.getItem("refreshToken");
+
+            if (accessToken && idToken) {
+                // Validate token (basic check - in production, verify expiration)
+                const payload = JSON.parse(atob(idToken.split(".")[1]));
+                const now = Math.floor(Date.now() / 1000);
+
+                if (payload.exp > now) {
+                    await this.handleSuccessfulLogin(
+                        accessToken,
+                        idToken,
+                        refreshToken
+                    );
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log("No valid existing session found");
+        }
+
+        this.showAuthSection();
+    }
+
+    async handleLogin() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!username || !password) {
+            this.showStatus("Please enter both username and password", "error");
+            return;
+        }
+
+        const loginBtn = document.getElementById("login-btn");
+        const originalText = loginBtn.textContent;
+        loginBtn.innerHTML = '<span class="loading"></span>Signing In...';
+        loginBtn.disabled = true;
+
+        try {
+            const response = await this.authenticateUser(username, password);
+            await this.handleSuccessfulLogin(
+                response.AuthenticationResult.AccessToken,
+                response.AuthenticationResult.IdToken,
+                response.AuthenticationResult.RefreshToken
+            );
+        } catch (error) {
+            console.error("Login error:", error);
+            this.showStatus(this.getErrorMessage(error), "error");
+        } finally {
+            loginBtn.textContent = originalText;
+            loginBtn.disabled = false;
+        }
+    }
+
+    async handleSignup() {
+        const username = document.getElementById("reg-username").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const password = document.getElementById("reg-password").value;
+
+        if (!username || !email || !password) {
+            this.showStatus("Please fill in all fields", "error");
+            return;
+        }
+
+        const signupBtn = document.getElementById("signup-btn");
+        const originalText = signupBtn.textContent;
+        signupBtn.innerHTML =
+            '<span class="loading"></span>Creating Account...';
+        signupBtn.disabled = true;
+
+        try {
+            await this.signUpUser(username, email, password);
+            this.pendingUsername = username;
+            this.showVerificationForm();
+            this.showStatus(
+                "Account created! Please check your email for verification code.",
+                "success"
+            );
+        } catch (error) {
+            console.error("Signup error:", error);
+            this.showStatus(this.getErrorMessage(error), "error");
+        } finally {
+            signupBtn.textContent = originalText;
+            signupBtn.disabled = false;
+        }
+    }
+
+    async handleVerification() {
+        const code = document.getElementById("verification-code").value.trim();
+
+        if (!code) {
+            this.showStatus("Please enter the verification code", "error");
+            return;
+        }
+
+        const verifyBtn = document.getElementById("verify-btn");
+        const originalText = verifyBtn.textContent;
+        verifyBtn.innerHTML = '<span class="loading"></span>Verifying...';
+        verifyBtn.disabled = true;
+
+        try {
+            await this.confirmSignUp(this.pendingUsername, code);
+            this.showStatus(
+                "Email verified successfully! You can now sign in.",
+                "success"
+            );
+            this.showLoginForm();
+        } catch (error) {
+            console.error("Verification error:", error);
+            this.showStatus(this.getErrorMessage(error), "error");
+        } finally {
+            verifyBtn.textContent = originalText;
+            verifyBtn.disabled = false;
+        }
+    }
+
+    async resendVerificationCode() {
+        if (!this.pendingUsername) {
+            this.showStatus("No pending verification found", "error");
+            return;
+        }
+
+        try {
+            await this.resendConfirmationCode(this.pendingUsername);
+            this.showStatus(
+                "Verification code resent to your email",
+                "success"
+            );
+        } catch (error) {
+            console.error("Resend error:", error);
+            this.showStatus(this.getErrorMessage(error), "error");
+        }
+    }
+
+    async handleSuccessfulLogin(accessToken, idToken, refreshToken) {
+        // Store tokens
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("idToken", idToken);
+        localStorage.setItem("refreshToken", refreshToken);
+
+        // Parse user info from ID token
+        const payload = JSON.parse(atob(idToken.split(".")[1]));
+        this.currentUser = {
+            username: payload["cognito:username"],
+            email: payload.email,
+            sub: payload.sub,
+            idToken: idToken,
+            accessToken: accessToken,
         };
 
-        this.initializeElements();
-        this.bindEvents();
-        this.startStatsUpdate();
+        // Initialize AWS credentials
+        await this.initializeAwsCredentials(idToken);
+
+        this.showAppSection();
+        this.updateUserInfo();
+        this.showStatus("Successfully signed in!", "success");
     }
 
-    initializeElements() {
-        this.video = document.getElementById("video-player");
-        this.loadBtn = document.getElementById("load-video");
-        this.playlistInput = document.getElementById("playlist-url");
-        this.loadingOverlay = document.getElementById("loading-overlay");
-        this.loadingText = document.getElementById("loading-text");
-        this.errorMessage = document.getElementById("error-message");
-        this.qualitySelector = document.getElementById("quality-selector");
-        this.qualitySelect = document.getElementById("quality-select");
-
-        // Status elements
-        this.statusValue = document.getElementById("status-value");
-        this.formatValue = document.getElementById("format-value");
-        this.resolutionValue = document.getElementById("resolution-value");
-        this.bufferValue = document.getElementById("buffer-value");
-        this.speedValue = document.getElementById("speed-value");
-    }
-
-    bindEvents() {
-        this.loadBtn.addEventListener("click", () => this.loadVideo());
-        this.playlistInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") this.loadVideo();
-        });
-        this.qualitySelect.addEventListener("change", (e) =>
-            this.changeQuality(e.target.value)
-        );
-
-        // Video events
-        this.video.addEventListener("loadstart", () =>
-            this.updateStatus("Loading...")
-        );
-        this.video.addEventListener("canplay", () => this.onVideoReady());
-        this.video.addEventListener("playing", () =>
-            this.updateStatus("Playing")
-        );
-        this.video.addEventListener("pause", () => this.updateStatus("Paused"));
-        this.video.addEventListener("ended", () => this.updateStatus("Ended"));
-        this.video.addEventListener("error", (e) => this.onVideoError(e));
-        this.video.addEventListener("waiting", () =>
-            this.updateStatus("Buffering...")
-        );
-    }
-
-    async loadVideo() {
-        const playlistUrl = this.playlistInput.value.trim();
-
-        if (!playlistUrl) {
-            this.showError("Please enter a playlist URL");
-            return;
-        }
-
-        if (!this.isValidUrl(playlistUrl)) {
-            this.showError("Please enter a valid URL");
-            return;
-        }
-
-        this.hideError();
-        this.showLoading("Loading video stream...");
-        this.loadBtn.disabled = true;
-
+    async initializeAwsCredentials(idToken) {
         try {
-            await this.initializeHLS(playlistUrl);
-        } catch (error) {
-            this.showError(`Failed to load video: ${error.message}`);
-            this.hideLoading();
-            this.loadBtn.disabled = false;
-        }
-    }
-
-    async initializeHLS(playlistUrl) {
-        // Destroy existing HLS instance
-        if (this.hls) {
-            this.hls.destroy();
-        }
-
-        if (Hls.isSupported()) {
-            this.hls = new Hls({
-                debug: false,
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90,
-                maxBufferLength: 60,
-                maxMaxBufferLength: 120,
-                startLevel: -1, // Auto quality selection
-                capLevelToPlayerSize: true,
-                // Progressive loading settings
-                progressive: true,
-                manifestLoadingTimeOut: 20000,
-                manifestLoadingMaxRetry: 3,
-                levelLoadingTimeOut: 20000,
-                levelLoadingMaxRetry: 3,
-                fragLoadingTimeOut: 20000,
-                fragLoadingMaxRetry: 3,
+            this.cognitoIdentityClient = new CognitoIdentityClient({
+                region: CONFIG.region,
             });
 
-            this.bindHLSEvents();
-            this.hls.loadSource(playlistUrl);
-            this.hls.attachMedia(this.video);
-        } else if (this.video.canPlayType("application/vnd.apple.mpegurl")) {
-            // Native HLS support (Safari)
-            this.video.src = playlistUrl;
-            this.updateStatus("Loading (Native HLS)...");
-            this.formatValue.textContent = "HLS (Native)";
-        } else {
-            throw new Error("HLS is not supported in this browser");
+            this.credentials = fromCognitoIdentityPool({
+                identityPoolId: CONFIG.identityPoolId,
+                logins: {
+                    [`cognito-idp.${CONFIG.region}.amazonaws.com/${CONFIG.userPoolId}`]:
+                        idToken,
+                },
+                client: this.cognitoIdentityClient,
+            });
+
+            // Test the credentials
+            await this.credentials();
+            console.log("AWS credentials initialized successfully");
+        } catch (error) {
+            console.error("Error initializing AWS credentials:", error);
+            throw error;
         }
     }
 
-    bindHLSEvents() {
-        this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-            this.onManifestParsed(data);
-        });
-
-        this.hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
-            this.onLevelLoaded(data);
-        });
-
-        this.hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
-            this.onFragmentLoaded(data);
-        });
-
-        this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-            this.onLevelSwitched(data);
-        });
-
-        this.hls.on(Hls.Events.ERROR, (event, data) => {
-            this.onHLSError(data);
-        });
+    handleLogout() {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("idToken");
+        localStorage.removeItem("refreshToken");
+        this.currentUser = null;
+        this.credentials = null;
+        this.showAuthSection();
+        this.showStatus("Successfully signed out", "info");
     }
 
-    onManifestParsed(data) {
-        console.log("Manifest parsed, levels:", data.levels);
-        this.formatValue.textContent = "HLS";
-        this.updateQualitySelector(data.levels);
-        this.updateStatus("Ready to play");
+    showAuthSection() {
+        document.getElementById("auth-section").classList.remove("hidden");
+        document.getElementById("app-section").classList.add("hidden");
+        this.showLoginForm();
     }
 
-    onLevelLoaded(data) {
-        console.log("Level loaded:", data.details);
-        this.hideLoading();
-        this.loadBtn.disabled = false;
+    showAppSection() {
+        document.getElementById("auth-section").classList.add("hidden");
+        document.getElementById("app-section").classList.remove("hidden");
     }
 
-    onFragmentLoaded(data) {
-        this.stats.bytesLoaded += data.frag.loaded || 0;
-        this.updateNetworkSpeed(data);
+    updateUserInfo() {
+        const userDetails = document.getElementById("user-details");
+        userDetails.innerHTML = `
+            <strong>Username:</strong> ${this.currentUser.username}<br>
+            <strong>Email:</strong> ${this.currentUser.email}<br>
+            <strong>User ID:</strong> ${this.currentUser.sub}
+        `;
     }
 
-    onLevelSwitched(data) {
-        const level = this.hls.levels[data.level];
-        if (level) {
-            this.resolutionValue.textContent = `${level.width}x${
-                level.height
-            } @ ${Math.round(level.bitrate / 1000)}kbps`;
+    async makeAuthenticatedRequest(method, path, body = null) {
+        if (!this.credentials) {
+            throw new Error("Not authenticated");
         }
-    }
 
-    onVideoReady() {
-        this.hideLoading();
-        this.loadBtn.disabled = false;
-        this.updateStatus("Ready");
-
-        // Auto-play if user wants it (be careful with browser policies)
-        // this.video.play().catch(e => console.log('Auto-play prevented:', e));
-    }
-
-    onVideoError(event) {
-        console.error("Video error:", event);
-        this.showError("Video playback error occurred");
-        this.hideLoading();
-        this.loadBtn.disabled = false;
-    }
-
-    onHLSError(data) {
-        console.error("HLS error:", data);
-
-        if (data.fatal) {
-            switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                    this.showError(
-                        "Network error: Failed to load video segments"
-                    );
-                    this.hls.startLoad();
-                    break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                    this.showError("Media error: Video format not supported");
-                    this.hls.recoverMediaError();
-                    break;
-                default:
-                    this.showError(`Fatal error: ${data.details}`);
-                    break;
-            }
-        } else {
-            console.warn("Non-fatal HLS error:", data.details);
-        }
-    }
-
-    updateQualitySelector(levels) {
-        this.qualitySelect.innerHTML =
-            '<option value="-1">Auto Quality</option>';
-
-        levels.forEach((level, index) => {
-            const option = document.createElement("option");
-            option.value = index;
-            option.textContent = `${level.height}p (${Math.round(
-                level.bitrate / 1000
-            )}kbps)`;
-            this.qualitySelect.appendChild(option);
-        });
-
-        this.qualitySelector.style.display = "block";
-    }
-
-    changeQuality(levelIndex) {
-        if (this.hls) {
-            this.hls.currentLevel = parseInt(levelIndex);
-            console.log("Quality changed to level:", levelIndex);
-        }
-    }
-
-    updateNetworkSpeed(data) {
-        if (data.frag && data.frag.loaded && data.frag.duration) {
-            const speedBps = data.frag.loaded / (data.frag.loadDuration / 1000);
-            this.stats.networkSpeed = speedBps;
-
-            const speedMbps = ((speedBps * 8) / 1000000).toFixed(1);
-            this.speedValue.textContent = `${speedMbps} Mbps`;
-        }
-    }
-
-    startStatsUpdate() {
-        setInterval(() => {
-            this.updateBufferInfo();
-        }, 1000);
-    }
-
-    updateBufferInfo() {
-        if (this.video && this.video.buffered.length > 0) {
-            const currentTime = this.video.currentTime;
-            const bufferedEnd = this.video.buffered.end(
-                this.video.buffered.length - 1
-            );
-            const bufferLength = bufferedEnd - currentTime;
-
-            this.stats.bufferLength = bufferLength;
-            this.bufferValue.textContent = `${bufferLength.toFixed(1)}s`;
-        }
-    }
-
-    showLoading(text = "Loading...") {
-        this.isLoading = true;
-        this.loadingText.textContent = text;
-        this.loadingOverlay.classList.remove("hidden");
-    }
-
-    hideLoading() {
-        this.isLoading = false;
-        this.loadingOverlay.classList.add("hidden");
-    }
-
-    showError(message) {
-        this.errorMessage.textContent = message;
-        this.errorMessage.style.display = "block";
-        this.updateStatus("Error");
-    }
-
-    hideError() {
-        this.errorMessage.style.display = "none";
-    }
-
-    updateStatus(status) {
-        this.statusValue.textContent = status;
-    }
-
-    isValidUrl(string) {
         try {
-            new URL(string);
-            return true;
-        } catch (_) {
-            return false;
+            const url = new URL(CONFIG.apiEndpoint + path);
+            const creds = await this.credentials();
+
+            const request = new HttpRequest({
+                method,
+                hostname: url.hostname,
+                path: url.pathname + url.search,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${this.currentUser.idToken}`,
+                    Host: url.hostname,
+                },
+                body: body ? JSON.stringify(body) : undefined,
+            });
+
+            const signer = new SignatureV4({
+                service: "execute-api",
+                region: CONFIG.region,
+                credentials: creds,
+                sha256: Sha256,
+            });
+
+            const signedRequest = await signer.sign(request);
+
+            const fetchHeaders = {};
+            for (const [key, value] of Object.entries(signedRequest.headers)) {
+                fetchHeaders[key] = value;
+            }
+
+            const response = await fetch(url.toString(), {
+                method: signedRequest.method,
+                headers: fetchHeaders,
+                body: signedRequest.body,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                return await response.json();
+            } else {
+                return await response.text();
+            }
+        } catch (error) {
+            console.error("Request error:", error);
+            throw error;
         }
     }
 
-    // Public methods for external control
-    play() {
-        return this.video.play();
+    async getLibraries() {
+        const button = document.getElementById("get-libraries-btn");
+        const originalText = button.textContent;
+        button.innerHTML = '<span class="loading"></span>Loading...';
+        button.disabled = true;
+
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "GET",
+                "/libraries"
+            );
+            this.displayApiResponse("Get Libraries", result);
+        } catch (error) {
+            this.displayApiResponse("Get Libraries Error", {
+                error: error.message,
+            });
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
     }
 
-    pause() {
-        this.video.pause();
+    async getLibraryJson() {
+        const ownerId = document.getElementById("owner-id-input").value.trim();
+        if (!ownerId) {
+            this.showStatus("Please enter an Owner ID", "error");
+            return;
+        }
+
+        const button = document.getElementById("get-library-json-btn");
+        const originalText = button.textContent;
+        button.innerHTML = '<span class="loading"></span>Loading...';
+        button.disabled = true;
+
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${ownerId}/library.json`
+            );
+            this.displayApiResponse("Get Library JSON", result);
+        } catch (error) {
+            this.displayApiResponse("Get Library JSON Error", {
+                error: error.message,
+            });
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
     }
 
-    seek(time) {
-        this.video.currentTime = time;
+    async getPlaylist() {
+        const ownerId = document.getElementById("owner-id-input").value.trim();
+        const movieId = document.getElementById("movie-id-input").value.trim();
+
+        if (!ownerId || !movieId) {
+            this.showStatus("Please enter both Owner ID and Movie ID", "error");
+            return;
+        }
+
+        const button = document.getElementById("get-playlist-btn");
+        const originalText = button.textContent;
+        button.innerHTML = '<span class="loading"></span>Loading...';
+        button.disabled = true;
+
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${ownerId}/movies/${movieId}/playlist.m3u8`
+            );
+            this.displayApiResponse("Get Playlist", result);
+        } catch (error) {
+            this.displayApiResponse("Get Playlist Error", {
+                error: error.message,
+            });
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
     }
 
-    setVolume(volume) {
-        this.video.volume = Math.max(0, Math.min(1, volume));
+    displayApiResponse(title, data) {
+        const responseElement = document.getElementById("api-response");
+        const isJson = typeof data === "object";
+
+        responseElement.innerHTML = `
+            <h4>${title}</h4>
+            <div class="json-display">${
+                isJson ? JSON.stringify(data, null, 2) : data
+            }</div>
+        `;
     }
 
-    getCurrentTime() {
-        return this.video.currentTime;
+    // Cognito Authentication Methods
+    async authenticateUser(username, password) {
+        const authData = {
+            AuthFlow: "USER_PASSWORD_AUTH",
+            ClientId: CONFIG.userPoolWebClientId,
+            AuthParameters: {
+                USERNAME: username,
+                PASSWORD: password,
+            },
+        };
+
+        const response = await fetch(
+            `https://cognito-idp.${CONFIG.region}.amazonaws.com/`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-amz-json-1.1",
+                    "X-Amz-Target":
+                        "AWSCognitoIdentityProviderService.InitiateAuth",
+                },
+                body: JSON.stringify(authData),
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Authentication failed");
+        }
+
+        return await response.json();
     }
 
-    getDuration() {
-        return this.video.duration;
+    async signUpUser(username, email, password) {
+        const signUpData = {
+            ClientId: CONFIG.userPoolWebClientId,
+            Username: username,
+            Password: password,
+            UserAttributes: [
+                {
+                    Name: "email",
+                    Value: email,
+                },
+            ],
+        };
+
+        const response = await fetch(
+            `https://cognito-idp.${CONFIG.region}.amazonaws.com/`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-amz-json-1.1",
+                    "X-Amz-Target": "AWSCognitoIdentityProviderService.SignUp",
+                },
+                body: JSON.stringify(signUpData),
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Sign up failed");
+        }
+
+        return await response.json();
     }
 
-    destroy() {
-        if (this.hls) {
-            this.hls.destroy();
-            this.hls = null;
+    async confirmSignUp(username, confirmationCode) {
+        const confirmData = {
+            ClientId: CONFIG.userPoolWebClientId,
+            Username: username,
+            ConfirmationCode: confirmationCode,
+        };
+
+        const response = await fetch(
+            `https://cognito-idp.${CONFIG.region}.amazonaws.com/`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-amz-json-1.1",
+                    "X-Amz-Target":
+                        "AWSCognitoIdentityProviderService.ConfirmSignUp",
+                },
+                body: JSON.stringify(confirmData),
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Confirmation failed");
+        }
+
+        return await response.json();
+    }
+
+    async resendConfirmationCode(username) {
+        const resendData = {
+            ClientId: CONFIG.userPoolWebClientId,
+            Username: username,
+        };
+
+        const response = await fetch(
+            `https://cognito-idp.${CONFIG.region}.amazonaws.com/`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-amz-json-1.1",
+                    "X-Amz-Target":
+                        "AWSCognitoIdentityProviderService.ResendConfirmationCode",
+                },
+                body: JSON.stringify(resendData),
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Resend failed");
+        }
+
+        return await response.json();
+    }
+
+    getErrorMessage(error) {
+        const errorMessage = error.message || error.toString();
+
+        if (errorMessage.includes("NotAuthorizedException")) {
+            return "Invalid username or password";
+        } else if (errorMessage.includes("UserNotConfirmedException")) {
+            return "Please verify your email address first";
+        } else if (errorMessage.includes("UsernameExistsException")) {
+            return "Username already exists";
+        } else if (errorMessage.includes("InvalidPasswordException")) {
+            return "Password does not meet requirements";
+        } else if (errorMessage.includes("CodeMismatchException")) {
+            return "Invalid verification code";
+        } else if (errorMessage.includes("ExpiredCodeException")) {
+            return "Verification code has expired";
+        } else if (errorMessage.includes("TooManyRequestsException")) {
+            return "Too many requests. Please try again later";
+        } else if (errorMessage.includes("LimitExceededException")) {
+            return "Attempt limit exceeded. Please try again later";
+        } else if (errorMessage.includes("InvalidParameterException")) {
+            return "Invalid input parameters";
+        } else {
+            return errorMessage;
         }
     }
 }
 
-// Initialize player when DOM is loaded
+// Initialize the app when the page loads
 document.addEventListener("DOMContentLoaded", () => {
-    // Check if HLS.js is available
-    if (!window.Hls && typeof Hls === "undefined") {
-        console.error(
-            "HLS.js not found. Please install it: npm install hls.js"
-        );
-        document.getElementById("error-message").textContent =
-            "HLS.js library not found. Please check your build configuration.";
-        document.getElementById("error-message").style.display = "block";
-        return;
-    }
-
-    window.videoPlayer = new VideoStreamPlayer();
-    console.log("Video Stream Player initialized");
+    window.mediaLibraryApp = new MediaLibraryApp();
 });
 
-// Export for webpack
-export default VideoStreamPlayer;
+// Add some helper functions for debugging
+window.debugAuth = {
+    getCurrentUser: () => window.mediaLibraryApp?.currentUser,
+    getTokens: () => ({
+        accessToken: localStorage.getItem("accessToken"),
+        idToken: localStorage.getItem("idToken"),
+        refreshToken: localStorage.getItem("refreshToken"),
+    }),
+    clearTokens: () => {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("idToken");
+        localStorage.removeItem("refreshToken");
+        console.log("Tokens cleared");
+    },
+};
