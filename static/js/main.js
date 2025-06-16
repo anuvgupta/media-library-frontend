@@ -313,48 +313,33 @@ class MediaLibraryApp {
     }
 
     async makeAuthenticatedRequest(method, path, body = null) {
-        if (!this.credentials) {
-            throw new Error("Not authenticated");
+        if (!this.currentUser?.idToken) {
+            throw new Error("Not authenticated - no ID token");
         }
 
         try {
-            const url = new URL(CONFIG.apiEndpoint + path);
-            const creds = await this.credentials();
+            const url = CONFIG.apiEndpoint + path;
 
-            const request = new HttpRequest({
-                method,
-                hostname: url.hostname,
-                path: url.pathname + url.search,
+            console.log("Making request to:", url);
+            console.log(
+                "Using JWT token:",
+                this.currentUser.idToken.substring(0, 50) + "..."
+            );
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${this.currentUser.idToken}`,
-                    Host: url.hostname,
                 },
                 body: body ? JSON.stringify(body) : undefined,
             });
 
-            const signer = new SignatureV4({
-                service: "execute-api",
-                region: CONFIG.region,
-                credentials: creds,
-                sha256: Sha256,
-            });
-
-            const signedRequest = await signer.sign(request);
-
-            const fetchHeaders = {};
-            for (const [key, value] of Object.entries(signedRequest.headers)) {
-                fetchHeaders[key] = value;
-            }
-
-            const response = await fetch(url.toString(), {
-                method: signedRequest.method,
-                headers: fetchHeaders,
-                body: signedRequest.body,
-            });
+            console.log("Response status:", response.status);
 
             if (!response.ok) {
                 const errorText = await response.text();
+                console.error("Error response:", errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
