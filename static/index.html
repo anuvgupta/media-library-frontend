@@ -243,6 +243,121 @@
                 overflow-y: auto;
             }
 
+            .sharing-section {
+                margin-top: 20px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #28a745;
+            }
+
+            .shared-user-item {
+                display: flex;
+                justify-content: between;
+                align-items: center;
+                background: white;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 6px;
+                border: 1px solid #e9ecef;
+            }
+
+            .shared-user-info {
+                flex: 1;
+            }
+
+            .shared-user-info h5 {
+                margin: 0 0 5px 0;
+                color: #495057;
+            }
+
+            .shared-user-info p {
+                margin: 0;
+                font-size: 0.85rem;
+                color: #6c757d;
+            }
+
+            .shared-user-actions {
+                margin-left: 15px;
+            }
+
+            .btn-small {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+                min-width: auto;
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 30px;
+                color: #6c757d;
+                font-style: italic;
+            }
+
+            .tab-buttons {
+                display: flex;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #e9ecef;
+            }
+
+            .tab-button {
+                padding: 10px 20px;
+                background: none;
+                border: none;
+                border-bottom: 2px solid transparent;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 500;
+                color: #6c757d;
+                transition: all 0.3s ease;
+            }
+
+            .tab-button.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+            }
+
+            .tab-button:hover {
+                color: #667eea;
+            }
+
+            .tab-content {
+                display: none;
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+
+            .stat-card {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                border: 1px solid #e9ecef;
+            }
+
+            .stat-value {
+                font-size: 24px;
+                font-weight: bold;
+                color: #667eea;
+                margin-bottom: 5px;
+            }
+
+            .stat-label {
+                font-size: 12px;
+                color: #6c757d;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
             @media (max-width: 768px) {
                 .container {
                     padding: 10px;
@@ -378,51 +493,74 @@
                     </button>
                 </div>
 
-                <!-- API Testing Section -->
                 <div class="card">
                     <h3>📚 Library Management</h3>
-                    <p>Test the media library API endpoints</p>
 
-                    <div class="button-grid">
-                        <button id="get-libraries-btn" class="btn btn-success">
-                            Get My Libraries
+                    <!-- Tab Navigation -->
+                    <div class="tab-buttons">
+                        <button
+                            class="tab-button active"
+                            data-tab="basic-operations"
+                        >
+                            Basic Operations
                         </button>
                         <button
-                            id="get-library-json-btn"
-                            class="btn btn-success"
+                            class="tab-button"
+                            data-tab="sharing-management"
                         >
-                            Get Library JSON
-                        </button>
-                        <button id="get-playlist-btn" class="btn btn-success">
-                            Get Movie Playlist
+                            Sharing Management
                         </button>
                     </div>
 
-                    <!-- Test Inputs -->
-                    <div style="margin-top: 20px">
-                        <div class="form-group">
-                            <label for="owner-id-input"
-                                >Owner ID (for library JSON):</label
+                    <!-- Basic Operations Tab -->
+                    <div id="basic-operations" class="tab-content active">
+                        <p>Test the media library API endpoints</p>
+
+                        <div class="button-grid">
+                            <button
+                                id="get-libraries-btn"
+                                class="btn btn-success"
                             >
-                            <input
-                                type="text"
-                                id="owner-id-input"
-                                placeholder="Enter owner user ID"
-                            />
-                        </div>
-                        <div class="form-group">
-                            <label for="movie-id-input"
-                                >Movie ID (for playlist):</label
+                                Get My Libraries
+                            </button>
+                            <button
+                                id="get-library-json-btn"
+                                class="btn btn-success"
                             >
-                            <input
-                                type="text"
-                                id="movie-id-input"
-                                placeholder="Enter movie ID"
-                            />
+                                Get Library JSON
+                            </button>
+                            <button
+                                id="get-playlist-btn"
+                                class="btn btn-success"
+                            >
+                                Get Movie Playlist
+                            </button>
                         </div>
 
-                        <div class="form-group">
-                            <div class="input-group">
+                        <!-- Test Inputs -->
+                        <div style="margin-top: 20px">
+                            <div class="form-group">
+                                <label for="owner-id-input"
+                                    >Owner ID (for library JSON):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="owner-id-input"
+                                    placeholder="Enter owner user ID"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="movie-id-input"
+                                    >Movie ID (for playlist):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="movie-id-input"
+                                    placeholder="Enter movie ID"
+                                />
+                            </div>
+
+                            <div class="form-group">
                                 <label for="share-with-input"
                                     >Share with (username or email):</label
                                 >
@@ -431,24 +569,101 @@
                                     id="share-with-input"
                                     placeholder="username or email@example.com"
                                 />
-                            </div>
-                            <!-- <div class="input-group">
-                                <label for="share-permissions"
-                                    >Permissions:</label
+                                <button
+                                    id="share-library-btn"
+                                    class="btn btn-primary"
+                                    style="margin-top: 10px"
                                 >
-                                <select id="share-permissions">
-                                    <option value="read">Read Only</option>
-                                    <option value="write">Read & Write</option>
-                                </select>
-                            </div> -->
-                            <button id="share-library-btn" class="api-btn">
-                                Share Library
+                                    Share Library
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sharing Management Tab -->
+                    <div id="sharing-management" class="tab-content">
+                        <p>Manage who has access to your libraries</p>
+
+                        <div class="button-grid">
+                            <button
+                                id="list-shared-access-btn"
+                                class="btn btn-success"
+                            >
+                                View Shared Access
                             </button>
+                            <button
+                                id="refresh-sharing-btn"
+                                class="btn btn-secondary"
+                            >
+                                Refresh
+                            </button>
+                        </div>
+
+                        <!-- Sharing Stats -->
+                        <div
+                            id="sharing-stats"
+                            class="stats-grid"
+                            style="display: none"
+                        >
+                            <div class="stat-card">
+                                <div class="stat-value" id="total-shared-users">
+                                    0
+                                </div>
+                                <div class="stat-label">Shared Users</div>
+                            </div>
+                            <div class="stat-card">
+                                <div
+                                    class="stat-value"
+                                    id="library-access-type"
+                                >
+                                    -
+                                </div>
+                                <div class="stat-label">Access Type</div>
+                            </div>
+                        </div>
+
+                        <!-- Shared Users List -->
+                        <div
+                            id="shared-users-container"
+                            class="sharing-section"
+                            style="display: none"
+                        >
+                            <h4>👥 Users with Access</h4>
+                            <div id="shared-users-list">
+                                <!-- Shared users will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Remove Access Form -->
+                        <div class="form-group" style="margin-top: 20px">
+                            <label for="remove-user-id-input"
+                                >Remove Access by User ID:</label
+                            >
+                            <div
+                                style="
+                                    display: flex;
+                                    gap: 10px;
+                                    align-items: end;
+                                "
+                            >
+                                <input
+                                    type="text"
+                                    id="remove-user-id-input"
+                                    placeholder="Enter user ID to remove"
+                                    style="flex: 1"
+                                />
+                                <button
+                                    id="remove-access-btn"
+                                    class="btn btn-danger"
+                                >
+                                    Remove Access
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Results Section -->
+                <!-- Results Section (keep as is) -->
                 <div class="card">
                     <h3>📋 API Response</h3>
                     <div id="api-response">

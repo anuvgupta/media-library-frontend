@@ -68,6 +68,45 @@ class MediaLibraryApp {
             .addEventListener("keypress", (e) => {
                 if (e.key === "Enter") this.handleVerification();
             });
+
+        // Tab switching
+        document.querySelectorAll(".tab-button").forEach((button) => {
+            button.addEventListener("click", (e) =>
+                this.switchTab(e.target.dataset.tab)
+            );
+        });
+
+        // New sharing management buttons
+        document
+            .getElementById("list-shared-access-btn")
+            .addEventListener("click", () => this.listSharedAccess());
+        document
+            .getElementById("refresh-sharing-btn")
+            .addEventListener("click", () => this.listSharedAccess());
+        document
+            .getElementById("remove-access-btn")
+            .addEventListener("click", () => this.removeSharedAccess());
+    }
+
+    switchTab(tabName) {
+        // Remove active class from all tabs and content
+        document
+            .querySelectorAll(".tab-button")
+            .forEach((btn) => btn.classList.remove("active"));
+        document
+            .querySelectorAll(".tab-content")
+            .forEach((content) => content.classList.remove("active"));
+
+        // Add active class to selected tab and content
+        document
+            .querySelector(`[data-tab="${tabName}"]`)
+            .classList.add("active");
+        document.getElementById(tabName).classList.add("active");
+
+        // Auto-load sharing data when switching to sharing tab
+        if (tabName === "sharing-management") {
+            this.listSharedAccess();
+        }
     }
 
     showStatus(message, type = "info") {
@@ -609,6 +648,156 @@ class MediaLibraryApp {
             button.textContent = originalText;
             button.disabled = false;
         }
+    }
+
+    async listSharedAccess() {
+        const ownerId = this.currentUser?.sub;
+        if (!ownerId) {
+            this.showStatus("Not authenticated", "error");
+            return;
+        }
+
+        const button = document.getElementById("list-shared-access-btn");
+        const refreshButton = document.getElementById("refresh-sharing-btn");
+        const originalText = button.textContent;
+
+        button.innerHTML = '<span class="loading"></span>Loading...';
+        button.disabled = true;
+        refreshButton.disabled = true;
+
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${ownerId}/share`
+            );
+            this.displaySharedAccess(result);
+            this.displayApiResponse("List Shared Access", result);
+        } catch (error) {
+            this.displayApiResponse("List Shared Access Error", {
+                error: error.message,
+            });
+            this.hideSharedAccessUI();
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+            refreshButton.disabled = false;
+        }
+    }
+
+    async removeSharedAccess() {
+        const ownerId = this.currentUser?.sub;
+        const userIdToRemove = document
+            .getElementById("remove-user-id-input")
+            .value.trim();
+
+        if (!ownerId) {
+            this.showStatus("Not authenticated", "error");
+            return;
+        }
+
+        if (!userIdToRemove) {
+            this.showStatus("Please enter a user ID to remove", "error");
+            return;
+        }
+
+        const button = document.getElementById("remove-access-btn");
+        const originalText = button.textContent;
+        button.innerHTML = '<span class="loading"></span>Removing...';
+        button.disabled = true;
+
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "DELETE",
+                `/libraries/${ownerId}/share/${userIdToRemove}`
+            );
+
+            this.displayApiResponse("Remove Shared Access", result);
+            this.showStatus("Access removed successfully!", "success");
+
+            // Clear the input and refresh the list
+            document.getElementById("remove-user-id-input").value = "";
+            setTimeout(() => this.listSharedAccess(), 1000);
+        } catch (error) {
+            this.displayApiResponse("Remove Shared Access Error", {
+                error: error.message,
+            });
+            this.showStatus(
+                "Failed to remove access: " + error.message,
+                "error"
+            );
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    }
+
+    displaySharedAccess(data) {
+        // Update stats
+        document.getElementById("total-shared-users").textContent =
+            data.totalSharedUsers || 0;
+        document.getElementById("library-access-type").textContent = (
+            data.libraryAccessType || "private"
+        ).toUpperCase();
+
+        // Show stats section
+        document.getElementById("sharing-stats").style.display = "grid";
+
+        // Display shared users
+        const container = document.getElementById("shared-users-container");
+        const usersList = document.getElementById("shared-users-list");
+
+        if (!data.sharedAccesses || data.sharedAccesses.length === 0) {
+            usersList.innerHTML =
+                '<div class="empty-state">No users have access to this library</div>';
+        } else {
+            usersList.innerHTML = data.sharedAccesses
+                .map(
+                    (user) => `
+                            <div class="shared-user-item">
+                                <div class="shared-user-info">
+                                    <h5>${user.username || "Unknown User"}</h5>
+                                    <p>
+                                        <strong>Email:</strong> ${
+                                            user.email || "N/A"
+                                        }<br>
+                                        <strong>User ID:</strong> ${
+                                            user.sharedWithUserId
+                                        }<br>
+                                        <strong>Shared:</strong> ${new Date(
+                                            user.sharedAt
+                                        ).toLocaleDateString()}<br>
+                                        <strong>Permissions:</strong> ${
+                                            user.permissions || "read"
+                                        }
+                                    </p>
+                                </div>
+                                <div class="shared-user-actions">
+                                    <button class="btn btn-danger btn-small" 
+                                            onclick="window.mediaLibraryApp.removeSpecificAccess('${
+                                                user.sharedWithUserId
+                                            }')">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        `
+                )
+                .join("");
+        }
+
+        container.style.display = "block";
+    }
+
+    async removeSpecificAccess(userId) {
+        // Pre-fill the remove input and trigger removal
+        document.getElementById("remove-user-id-input").value = userId;
+        await this.removeSharedAccess();
+    }
+
+    hideSharedAccessUI() {
+        document.getElementById("sharing-stats").style.display = "none";
+        document.getElementById("shared-users-container").style.display =
+            "none";
     }
 
     getErrorMessage(error) {
