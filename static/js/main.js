@@ -392,7 +392,7 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerId}/library.json`
+                `/libraries/${ownerId}/library`
             );
             this.displayApiResponse("Get Library JSON", result);
         } catch (error) {
@@ -422,7 +422,7 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerId}/movies/${movieId}/playlist.m3u8`
+                `/libraries/${ownerId}/movies/${movieId}/playlist`
             );
             this.displayApiResponse("Get Playlist", result);
         } catch (error) {
