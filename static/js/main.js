@@ -705,7 +705,7 @@ class MediaLibraryApp {
     }
 
     async shareLibrary() {
-        const ownerIdentityId = this.currentUser?.sub;
+        const ownerIdentityId = await this.getIdentityId();
         if (!ownerIdentityId) {
             this.showStatus("Not authenticated", "error");
             return;
@@ -749,7 +749,7 @@ class MediaLibraryApp {
     }
 
     async listSharedAccess() {
-        const ownerIdentityId = this.currentUser?.identityId;
+        const ownerIdentityId = await this.getIdentityId();
         if (!ownerIdentityId) {
             this.showStatus("Not authenticated", "error");
             return;
