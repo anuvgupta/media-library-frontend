@@ -37,6 +37,9 @@ class MediaLibraryApp {
         document
             .getElementById("resend-code-btn")
             .addEventListener("click", () => this.resendVerificationCode());
+        document
+            .getElementById("goto-verify-btn")
+            .addEventListener("click", () => this.showVerificationView());
         // document
         //     .getElementById("logout-btn")
         //     .addEventListener("click", () => this.handleLogout());
