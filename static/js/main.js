@@ -370,29 +370,83 @@ class MediaLibraryApp {
     }
 
     async makeAuthenticatedRequest(method, path, body = null) {
-        if (!this.currentUser?.idToken) {
-            throw new Error("Not authenticated - no ID token");
+        if (!this.credentials) {
+            throw new Error("Not authenticated - no AWS credentials available");
         }
 
         try {
-            const url = CONFIG.apiEndpoint + path;
+            // Get fresh credentials
+            const awsCredentials = await this.credentials();
 
-            console.log("Making request to:", url);
-            console.log(
-                "Using JWT token:",
-                this.currentUser.idToken.substring(0, 50) + "..."
-            );
+            if (!awsCredentials) {
+                throw new Error("Failed to obtain AWS credentials");
+            }
 
-            const response = await fetch(url, {
+            console.log("Using Identity ID:", awsCredentials.identityId);
+
+            // Parse the API endpoint URL
+            const apiUrl = new URL(CONFIG.apiEndpoint);
+            const hostname = apiUrl.hostname;
+            const fullPath = apiUrl.pathname.replace(/\/$/, "") + path; // Remove trailing slash and add path
+
+            // Prepare the request body
+            const requestBody = body ? JSON.stringify(body) : undefined;
+
+            // Create the HTTP request object
+            const request = new HttpRequest({
                 method: method,
+                hostname: hostname,
+                path: fullPath,
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${this.currentUser.idToken}`,
+                    Host: hostname,
                 },
-                body: body ? JSON.stringify(body) : undefined,
+                body: requestBody,
             });
 
+            console.log("Request details:", {
+                method: method,
+                hostname: hostname,
+                path: fullPath,
+                hasBody: !!requestBody,
+            });
+
+            // Create the SigV4 signer
+            const signer = new SignatureV4({
+                credentials: awsCredentials,
+                region: CONFIG.region,
+                service: "execute-api",
+                sha256: Sha256,
+            });
+
+            // Sign the request
+            const signedRequest = await signer.sign(request);
+
+            console.log("Request signed successfully");
+
+            // Convert signed request to fetch options
+            const fetchOptions = {
+                method: signedRequest.method,
+                headers: {},
+                body: signedRequest.body,
+            };
+
+            // Copy all headers from signed request
+            for (const [key, value] of Object.entries(signedRequest.headers)) {
+                fetchOptions.headers[key] = value;
+            }
+
+            // Make the actual HTTP request
+            const fullUrl = `${apiUrl.protocol}//${hostname}${fullPath}`;
+            console.log("Making request to:", fullUrl);
+
+            const response = await fetch(fullUrl, fetchOptions);
+
             console.log("Response status:", response.status);
+            console.log(
+                "Response headers:",
+                Object.fromEntries(response.headers.entries())
+            );
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -400,15 +454,37 @@ class MediaLibraryApp {
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
+            // Parse response based on content type
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
-                return await response.json();
+                const jsonResponse = await response.json();
+                console.log("JSON response received");
+                return jsonResponse;
             } else {
-                return await response.text();
+                const textResponse = await response.text();
+                console.log(
+                    "Text response received, length:",
+                    textResponse.length
+                );
+                return textResponse;
             }
         } catch (error) {
-            console.error("Request error:", error);
-            throw error;
+            console.error("Request error details:", {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+            });
+
+            // Provide more specific error messages
+            if (error.message.includes("fetch")) {
+                throw new Error(`Network error: ${error.message}`);
+            } else if (error.message.includes("credentials")) {
+                throw new Error(`Authentication error: ${error.message}`);
+            } else if (error.message.includes("sign")) {
+                throw new Error(`Request signing error: ${error.message}`);
+            } else {
+                throw error;
+            }
         }
     }
 
@@ -438,7 +514,7 @@ class MediaLibraryApp {
         const ownerIdentityId = document
             .getElementById("owner-id-input")
             .value.trim();
-        if (!ownerId) {
+        if (!ownerIdentityId) {
             this.showStatus("Please enter an Owner Identity ID", "error");
             return;
         }
