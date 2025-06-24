@@ -523,7 +523,7 @@ class MediaLibraryApp {
     async getOwnerDescriptor(ownerIdentityId) {
         const identityId = await this.getIdentityId();
         if (ownerIdentityId === identityId) {
-            return `${this.currentUser.username} (you)`;
+            return `${this.currentUser.username}`;
         }
         return `${ownerIdentityId}`;
     }
