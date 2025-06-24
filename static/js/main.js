@@ -75,11 +75,13 @@ class MediaLibraryApp {
     showStatus(message, type = "info") {
         const statusElement = document.getElementById("status-message");
         statusElement.textContent = message;
-        statusElement.style.display = "block";
+        // statusElement.style.display = "block";
+        statusElement.style.opacity = 0;
 
         // Auto-hide after 5 seconds
         setTimeout(() => {
-            statusElement.style.display = "none";
+            // statusElement.style.display = "none";
+            statusElement.style.opacity = 0;
         }, 5000);
     }
 

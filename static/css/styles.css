@@ -1,1 +1,9 @@
-/* no styles */
+* {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+body {
+    width: 70%;
+    margin: 0 auto;
+    padding: 20px 0 0 0;
+}
