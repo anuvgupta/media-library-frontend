@@ -40,9 +40,12 @@ class MediaLibraryApp {
         document
             .getElementById("goto-verify-btn")
             .addEventListener("click", () => this.showVerificationView());
-        // document
-        //     .getElementById("logout-btn")
-        //     .addEventListener("click", () => this.handleLogout());
+        document
+            .getElementById("logout-btn-library")
+            .addEventListener("click", () => this.handleLogout());
+        document
+            .getElementById("logout-btn-libraries")
+            .addEventListener("click", () => this.handleLogout());
 
         // Navigation buttons
         document
@@ -144,20 +147,15 @@ class MediaLibraryApp {
     }
 
     updateAccountSection() {
-        const accountElements = document.querySelectorAll(".account-section");
+        const accountElements = document.querySelectorAll(
+            ".account-section-content"
+        );
         accountElements.forEach((element) => {
             element.innerHTML = `
-                <h3>Account Information</h3>
                 <p>Username: ${this.currentUser.username}</p>
                 <p>Email: ${this.currentUser.email}</p>
-                <button id="logout-btn">Sign Out</button>
             `;
         });
-
-        // Re-add logout event listener
-        document
-            .getElementById("logout-btn")
-            .addEventListener("click", () => this.handleLogout());
     }
 
     async checkExistingSession() {
