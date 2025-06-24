@@ -538,32 +538,41 @@ class MediaLibraryApp {
     displayLibraryData() {
         const container = document.getElementById("library-content");
 
-        if (!this.currentLibraryData || !this.currentLibraryData.movies) {
+        if (
+            !this.currentLibraryData ||
+            Object.keys(this.currentLibraryData).length === 0
+        ) {
             container.innerHTML = "<p>No movies found in this library.</p>";
             return;
         }
 
-        // Sort movies alphabetically by title
-        const sortedMovies = [...this.currentLibraryData.movies].sort((a, b) =>
-            (a.title || "").localeCompare(b.title || "")
-        );
+        // Flatten all movies from all groups into a single array
+        const allMovies = [];
+        Object.keys(this.currentLibraryData).forEach((groupName) => {
+            this.currentLibraryData[groupName].forEach((movie) => {
+                allMovies.push(movie);
+            });
+        });
+
+        // Sort movies alphabetically by name
+        allMovies.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
         container.innerHTML = `
-            <h3>Movies (${sortedMovies.length})</h3>
-            ${sortedMovies
-                .map(
-                    (movie) => `
+        <h3>Movies (${allMovies.length})</h3>
+        ${allMovies
+            .map(
+                (movie) => `
                 <div>
-                    <h4>${movie.title || "Unknown Title"}</h4>
+                    <h4>${movie.name || "Unknown Title"}</h4>
                     <p>Year: ${movie.year || "Unknown"}</p>
-                    <p>Watch Time: ${movie.watchTime || "Unknown"}</p>
-                    <p>Size: ${movie.size || "Unknown"}</p>
+                    <p>Runtime: ${movie.runtime || "Unknown"}</p>
+                    <p>Quality: ${movie.quality || "Unknown"}</p>
                     <hr>
                 </div>
             `
-                )
-                .join("")}
-        `;
+            )
+            .join("")}
+    `;
     }
 
     async shareLibrary() {
@@ -587,7 +596,6 @@ class MediaLibraryApp {
                 `/libraries/${this.currentUser.identityId}/share`,
                 {
                     shareWithIdentityId: shareWithInput,
-                    permissions: "read",
                 }
             );
 
@@ -633,7 +641,6 @@ class MediaLibraryApp {
                 <p>Email: ${user.email || "N/A"}</p>
                 <p>User ID: ${user.sharedWithIdentityId}</p>
                 <p>Shared: ${new Date(user.sharedAt).toLocaleDateString()}</p>
-                <p>Permissions: ${user.permissions || "read"}</p>
                 <hr>
             </div>
         `
