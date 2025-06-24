@@ -541,9 +541,9 @@ class MediaLibraryApp {
                 this.libraries.map(
                     async (library) => `
                         <div>
-                            <h4>Library Owner: ${await this.getOwnerDescriptor(
+                            <h4>${await this.getOwnerDescriptor(
                                 library.ownerIdentityId
-                            )}</h4>
+                            )}'s Library</h4>
                             <button onclick="window.mediaLibraryApp.showLibraryView('${
                                 library.ownerIdentityId
                             }')" >
