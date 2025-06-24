@@ -542,8 +542,6 @@ class MediaLibraryApp {
         `
             )
             .join("");
-        // <p>Movies: ${library.movieCount || 0}</p>
-        // <p>Collections: ${library.collectionCount || 0}</p>
     }
 
     async loadLibraryData() {
