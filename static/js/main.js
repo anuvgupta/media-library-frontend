@@ -10,6 +10,9 @@ class MediaLibraryApp {
         this.currentUser = null;
         this.cognitoIdentityClient = null;
         this.credentials = null;
+        this.currentLibraryOwner = null;
+        this.currentLibraryData = null;
+        this.libraries = [];
         this.initializeEventListeners();
         this.checkExistingSession();
     }
@@ -20,37 +23,36 @@ class MediaLibraryApp {
             .getElementById("login-btn")
             .addEventListener("click", () => this.handleLogin());
         document
-            .getElementById("register-btn")
-            .addEventListener("click", () => this.showRegisterForm());
+            .getElementById("show-signup-btn")
+            .addEventListener("click", () => this.showSignupView());
+        document
+            .getElementById("show-signin-btn")
+            .addEventListener("click", () => this.showSigninView());
         document
             .getElementById("signup-btn")
             .addEventListener("click", () => this.handleSignup());
-        document
-            .getElementById("back-to-login-btn")
-            .addEventListener("click", () => this.showLoginForm());
         document
             .getElementById("verify-btn")
             .addEventListener("click", () => this.handleVerification());
         document
             .getElementById("resend-code-btn")
             .addEventListener("click", () => this.resendVerificationCode());
-        document
-            .getElementById("logout-btn")
-            .addEventListener("click", () => this.handleLogout());
+        // document
+        //     .getElementById("logout-btn")
+        //     .addEventListener("click", () => this.handleLogout());
 
-        // API buttons
+        // Navigation buttons
         document
-            .getElementById("get-libraries-btn")
-            .addEventListener("click", () => this.getLibraries());
-        document
-            .getElementById("get-library-json-btn")
-            .addEventListener("click", () => this.getLibraryJson());
-        document
-            .getElementById("get-playlist-btn")
-            .addEventListener("click", () => this.getPlaylist());
+            .getElementById("back-to-libraries-btn")
+            .addEventListener("click", () => this.showLibrariesView());
+
+        // Library sharing
         document
             .getElementById("share-library-btn")
             .addEventListener("click", () => this.shareLibrary());
+        document
+            .getElementById("refresh-shared-users-btn")
+            .addEventListener("click", () => this.loadSharedUsers());
 
         // Enter key handlers
         document
@@ -59,7 +61,7 @@ class MediaLibraryApp {
                 if (e.key === "Enter") this.handleLogin();
             });
         document
-            .getElementById("reg-password")
+            .getElementById("signup-password")
             .addEventListener("keypress", (e) => {
                 if (e.key === "Enter") this.handleSignup();
             });
@@ -68,75 +70,89 @@ class MediaLibraryApp {
             .addEventListener("keypress", (e) => {
                 if (e.key === "Enter") this.handleVerification();
             });
-
-        // Tab switching
-        document.querySelectorAll(".tab-button").forEach((button) => {
-            button.addEventListener("click", (e) =>
-                this.switchTab(e.target.dataset.tab)
-            );
-        });
-
-        // New sharing management buttons
-        document
-            .getElementById("list-shared-access-btn")
-            .addEventListener("click", () => this.listSharedAccess());
-        document
-            .getElementById("refresh-sharing-btn")
-            .addEventListener("click", () => this.listSharedAccess());
-        document
-            .getElementById("remove-access-btn")
-            .addEventListener("click", () => this.removeSharedAccess());
-    }
-
-    switchTab(tabName) {
-        // Remove active class from all tabs and content
-        document
-            .querySelectorAll(".tab-button")
-            .forEach((btn) => btn.classList.remove("active"));
-        document
-            .querySelectorAll(".tab-content")
-            .forEach((content) => content.classList.remove("active"));
-
-        // Add active class to selected tab and content
-        document
-            .querySelector(`[data-tab="${tabName}"]`)
-            .classList.add("active");
-        document.getElementById(tabName).classList.add("active");
-
-        // Auto-load sharing data when switching to sharing tab
-        if (tabName === "sharing-management") {
-            this.listSharedAccess();
-        }
     }
 
     showStatus(message, type = "info") {
         const statusElement = document.getElementById("status-message");
-        statusElement.className = `status ${type}`;
         statusElement.textContent = message;
-        statusElement.classList.remove("hidden");
+        statusElement.style.display = "block";
 
         // Auto-hide after 5 seconds
         setTimeout(() => {
-            statusElement.classList.add("hidden");
+            statusElement.style.display = "none";
         }, 5000);
     }
 
-    showLoginForm() {
-        document.getElementById("login-form").classList.remove("hidden");
-        document.getElementById("register-form").classList.add("hidden");
-        document.getElementById("verification-form").classList.add("hidden");
+    showSigninView() {
+        this.hideAllViews();
+        document.getElementById("signin-view").style.display = "block";
     }
 
-    showRegisterForm() {
-        document.getElementById("login-form").classList.add("hidden");
-        document.getElementById("register-form").classList.remove("hidden");
-        document.getElementById("verification-form").classList.add("hidden");
+    showSignupView() {
+        this.hideAllViews();
+        document.getElementById("signup-view").style.display = "block";
     }
 
-    showVerificationForm() {
-        document.getElementById("login-form").classList.add("hidden");
-        document.getElementById("register-form").classList.add("hidden");
-        document.getElementById("verification-form").classList.remove("hidden");
+    showVerificationView() {
+        this.hideAllViews();
+        document.getElementById("verification-view").style.display = "block";
+    }
+
+    showLibrariesView() {
+        this.hideAllViews();
+        document.getElementById("libraries-view").style.display = "block";
+        this.updateAccountSection();
+        this.loadLibraries();
+    }
+
+    showLibraryView(ownerIdentityId) {
+        this.hideAllViews();
+        this.currentLibraryOwner = ownerIdentityId;
+        document.getElementById("library-view").style.display = "block";
+        this.updateAccountSection();
+        this.loadLibraryData();
+
+        // Show/hide library management section based on ownership
+        const isOwner = this.currentUser.identityId === ownerIdentityId;
+        const managementSection = document.getElementById(
+            "library-management-section"
+        );
+        if (isOwner) {
+            managementSection.style.display = "block";
+            this.loadSharedUsers();
+        } else {
+            managementSection.style.display = "none";
+        }
+    }
+
+    hideAllViews() {
+        const views = [
+            "signin-view",
+            "signup-view",
+            "verification-view",
+            "libraries-view",
+            "library-view",
+        ];
+        views.forEach((view) => {
+            document.getElementById(view).style.display = "none";
+        });
+    }
+
+    updateAccountSection() {
+        const accountElements = document.querySelectorAll(".account-section");
+        accountElements.forEach((element) => {
+            element.innerHTML = `
+                <h3>Account Information</h3>
+                <p>Username: ${this.currentUser.username}</p>
+                <p>Email: ${this.currentUser.email}</p>
+                <button id="logout-btn">Sign Out</button>
+            `;
+        });
+
+        // Re-add logout event listener
+        document
+            .getElementById("logout-btn")
+            .addEventListener("click", () => this.handleLogout());
     }
 
     async checkExistingSession() {
@@ -163,7 +179,7 @@ class MediaLibraryApp {
             console.log("No valid existing session found");
         }
 
-        this.showAuthSection();
+        this.showSigninView();
     }
 
     async handleLogin() {
@@ -171,13 +187,13 @@ class MediaLibraryApp {
         const password = document.getElementById("password").value;
 
         if (!username || !password) {
-            this.showStatus("Please enter both username and password", "error");
+            this.showStatus("Please enter both username and password");
             return;
         }
 
         const loginBtn = document.getElementById("login-btn");
         const originalText = loginBtn.textContent;
-        loginBtn.innerHTML = '<span class="loading"></span>Signing In...';
+        loginBtn.textContent = "Signing In...";
         loginBtn.disabled = true;
 
         try {
@@ -189,7 +205,7 @@ class MediaLibraryApp {
             );
         } catch (error) {
             console.error("Login error:", error);
-            this.showStatus(this.getErrorMessage(error), "error");
+            this.showStatus(this.getErrorMessage(error));
         } finally {
             loginBtn.textContent = originalText;
             loginBtn.disabled = false;
@@ -197,32 +213,32 @@ class MediaLibraryApp {
     }
 
     async handleSignup() {
-        const username = document.getElementById("reg-username").value.trim();
-        const email = document.getElementById("reg-email").value.trim();
-        const password = document.getElementById("reg-password").value;
+        const username = document
+            .getElementById("signup-username")
+            .value.trim();
+        const email = document.getElementById("signup-email").value.trim();
+        const password = document.getElementById("signup-password").value;
 
         if (!username || !email || !password) {
-            this.showStatus("Please fill in all fields", "error");
+            this.showStatus("Please fill in all fields");
             return;
         }
 
         const signupBtn = document.getElementById("signup-btn");
         const originalText = signupBtn.textContent;
-        signupBtn.innerHTML =
-            '<span class="loading"></span>Creating Account...';
+        signupBtn.textContent = "Creating Account...";
         signupBtn.disabled = true;
 
         try {
             await this.signUpUser(username, email, password);
             this.pendingUsername = username;
-            this.showVerificationForm();
+            this.showVerificationView();
             this.showStatus(
-                "Account created! Please check your email for verification code.",
-                "success"
+                "Account created! Please check your email for verification code."
             );
         } catch (error) {
             console.error("Signup error:", error);
-            this.showStatus(this.getErrorMessage(error), "error");
+            this.showStatus(this.getErrorMessage(error));
         } finally {
             signupBtn.textContent = originalText;
             signupBtn.disabled = false;
@@ -233,25 +249,24 @@ class MediaLibraryApp {
         const code = document.getElementById("verification-code").value.trim();
 
         if (!code) {
-            this.showStatus("Please enter the verification code", "error");
+            this.showStatus("Please enter the verification code");
             return;
         }
 
         const verifyBtn = document.getElementById("verify-btn");
         const originalText = verifyBtn.textContent;
-        verifyBtn.innerHTML = '<span class="loading"></span>Verifying...';
+        verifyBtn.textContent = "Verifying...";
         verifyBtn.disabled = true;
 
         try {
             await this.confirmSignUp(this.pendingUsername, code);
             this.showStatus(
-                "Email verified successfully! You can now sign in.",
-                "success"
+                "Email verified successfully! You can now sign in."
             );
-            this.showLoginForm();
+            this.showSigninView();
         } catch (error) {
             console.error("Verification error:", error);
-            this.showStatus(this.getErrorMessage(error), "error");
+            this.showStatus(this.getErrorMessage(error));
         } finally {
             verifyBtn.textContent = originalText;
             verifyBtn.disabled = false;
@@ -260,19 +275,16 @@ class MediaLibraryApp {
 
     async resendVerificationCode() {
         if (!this.pendingUsername) {
-            this.showStatus("No pending verification found", "error");
+            this.showStatus("No pending verification found");
             return;
         }
 
         try {
             await this.resendConfirmationCode(this.pendingUsername);
-            this.showStatus(
-                "Verification code resent to your email",
-                "success"
-            );
+            this.showStatus("Verification code resent to your email");
         } catch (error) {
             console.error("Resend error:", error);
-            this.showStatus(this.getErrorMessage(error), "error");
+            this.showStatus(this.getErrorMessage(error));
         }
     }
 
@@ -299,9 +311,8 @@ class MediaLibraryApp {
         const identityId = await this.getIdentityId();
         this.currentUser.identityId = identityId;
 
-        this.showAppSection();
-        this.updateUserInfo();
-        this.showStatus("Successfully signed in!", "success");
+        this.showLibrariesView();
+        this.showStatus("Successfully signed in!");
     }
 
     async initializeAwsCredentials(idToken) {
@@ -344,29 +355,11 @@ class MediaLibraryApp {
         localStorage.removeItem("refreshToken");
         this.currentUser = null;
         this.credentials = null;
-        this.showAuthSection();
-        this.showStatus("Successfully signed out", "info");
-    }
-
-    showAuthSection() {
-        document.getElementById("auth-section").classList.remove("hidden");
-        document.getElementById("app-section").classList.add("hidden");
-        this.showLoginForm();
-    }
-
-    showAppSection() {
-        document.getElementById("auth-section").classList.add("hidden");
-        document.getElementById("app-section").classList.remove("hidden");
-    }
-
-    updateUserInfo() {
-        const userDetails = document.getElementById("user-details");
-        userDetails.innerHTML = `
-            <strong>Username:</strong> ${this.currentUser.username}<br>
-            <strong>Email:</strong> ${this.currentUser.email}<br>
-            <strong>User ID:</strong> ${this.currentUser.sub}
-            <strong>Identity ID:</strong> ${this.currentUser.identityId}
-        `;
+        this.currentLibraryOwner = null;
+        this.currentLibraryData = null;
+        this.libraries = [];
+        this.showSigninView();
+        this.showStatus("Successfully signed out");
     }
 
     async makeAuthenticatedRequest(method, path, body = null) {
@@ -488,103 +481,167 @@ class MediaLibraryApp {
         }
     }
 
-    async getLibraries() {
-        const button = document.getElementById("get-libraries-btn");
-        const originalText = button.textContent;
-        button.innerHTML = '<span class="loading"></span>Loading...';
-        button.disabled = true;
-
+    async loadLibraries() {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
                 "/libraries"
             );
-            this.displayApiResponse("Get Libraries", result);
+            this.libraries = result.ownedLibrary ? [result.ownedLibrary] : [];
+            this.libraries = [...this.libraries, ...result.sharedLibraries];
+            this.displayLibraries();
         } catch (error) {
-            this.displayApiResponse("Get Libraries Error", {
-                error: error.message,
-            });
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
+            console.error("Error loading libraries:", error);
+            this.showStatus("Error loading libraries: " + error.message);
         }
     }
 
-    async getLibraryJson() {
-        const ownerIdentityId = document
-            .getElementById("owner-id-input")
-            .value.trim();
-        if (!ownerIdentityId) {
-            this.showStatus("Please enter an Owner Identity ID", "error");
+    displayLibraries() {
+        const container = document.getElementById("libraries-list");
+
+        if (this.libraries.length === 0) {
+            container.innerHTML = "<p>No libraries found.</p>";
             return;
         }
 
-        const button = document.getElementById("get-library-json-btn");
-        const originalText = button.textContent;
-        button.innerHTML = '<span class="loading"></span>Loading...';
-        button.disabled = true;
+        container.innerHTML = this.libraries
+            .map(
+                (library) => `
+            <div>
+                <h4>Library Owner: ${library.ownerIdentityId}</h4>
+                <button onclick="window.mediaLibraryApp.showLibraryView('${library.ownerIdentityId}')">
+                    View Library
+                </button>
+                <hr>
+            </div>
+        `
+            )
+            .join("");
+        // <p>Movies: ${library.movieCount || 0}</p>
+        // <p>Collections: ${library.collectionCount || 0}</p>
+    }
 
+    async loadLibraryData() {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerIdentityId}/library`
+                `/libraries/${this.currentLibraryOwner}/library`
             );
-            this.displayApiResponse("Get Library JSON", result);
+            this.currentLibraryData = result;
+            this.displayLibraryData();
         } catch (error) {
-            this.displayApiResponse("Get Library JSON Error", {
-                error: error.message,
-            });
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
+            console.error("Error loading library data:", error);
+            this.showStatus("Error loading library data: " + error.message);
         }
     }
 
-    async getPlaylist() {
-        const ownerIdentityId = document
-            .getElementById("owner-id-input")
-            .value.trim();
-        const movieId = document.getElementById("movie-id-input").value.trim();
+    displayLibraryData() {
+        const container = document.getElementById("library-content");
 
-        if (!ownerIdentityId || !movieId) {
-            this.showStatus("Please enter both Owner ID and Movie ID", "error");
+        if (!this.currentLibraryData || !this.currentLibraryData.movies) {
+            container.innerHTML = "<p>No movies found in this library.</p>";
             return;
         }
 
-        const button = document.getElementById("get-playlist-btn");
-        const originalText = button.textContent;
-        button.innerHTML = '<span class="loading"></span>Loading...';
-        button.disabled = true;
+        // Sort movies alphabetically by title
+        const sortedMovies = [...this.currentLibraryData.movies].sort((a, b) =>
+            (a.title || "").localeCompare(b.title || "")
+        );
 
-        try {
-            const result = await this.makeAuthenticatedRequest(
-                "GET",
-                `/libraries/${ownerIdentityId}/movies/${movieId}/playlist`
-            );
-            this.displayApiResponse("Get Playlist", result);
-        } catch (error) {
-            this.displayApiResponse("Get Playlist Error", {
-                error: error.message,
-            });
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
-    }
-
-    displayApiResponse(title, data) {
-        const responseElement = document.getElementById("api-response");
-        const isJson = typeof data === "object";
-
-        responseElement.innerHTML = `
-            <h4>${title}</h4>
-            <div class="json-display">${
-                isJson ? JSON.stringify(data, null, 2) : data
-            }</div>
+        container.innerHTML = `
+            <h3>Movies (${sortedMovies.length})</h3>
+            ${sortedMovies
+                .map(
+                    (movie) => `
+                <div>
+                    <h4>${movie.title || "Unknown Title"}</h4>
+                    <p>Year: ${movie.year || "Unknown"}</p>
+                    <p>Watch Time: ${movie.watchTime || "Unknown"}</p>
+                    <p>Size: ${movie.size || "Unknown"}</p>
+                    <hr>
+                </div>
+            `
+                )
+                .join("")}
         `;
     }
 
-    // Cognito Authentication Methods
+    async shareLibrary() {
+        const shareWithInput = document
+            .getElementById("share-with-input")
+            .value.trim();
+
+        if (!shareWithInput) {
+            this.showStatus("Please enter a username or email to share with");
+            return;
+        }
+
+        const button = document.getElementById("share-library-btn");
+        const originalText = button.textContent;
+        button.textContent = "Sharing...";
+        button.disabled = true;
+
+        try {
+            await this.makeAuthenticatedRequest(
+                "POST",
+                `/libraries/${this.currentUser.identityId}/share`,
+                {
+                    shareWithIdentityId: shareWithInput,
+                    permissions: "read",
+                }
+            );
+
+            this.showStatus("Library shared successfully!");
+            document.getElementById("share-with-input").value = "";
+            this.loadSharedUsers(); // Refresh the shared users list
+        } catch (error) {
+            console.error("Error sharing library:", error);
+            this.showStatus("Error sharing library: " + error.message);
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    }
+
+    async loadSharedUsers() {
+        try {
+            const result = await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${this.currentUser.identityId}/share`
+            );
+            this.displaySharedUsers(result);
+        } catch (error) {
+            console.error("Error loading shared users:", error);
+            this.showStatus("Error loading shared users: " + error.message);
+        }
+    }
+
+    displaySharedUsers(data) {
+        const container = document.getElementById("shared-users-list");
+
+        if (!data.sharedAccesses || data.sharedAccesses.length === 0) {
+            container.innerHTML =
+                "<p>No users have access to this library.</p>";
+            return;
+        }
+
+        container.innerHTML = data.sharedAccesses
+            .map(
+                (user) => `
+            <div>
+                <p>Username: ${user.username || "Unknown"}</p>
+                <p>Email: ${user.email || "N/A"}</p>
+                <p>User ID: ${user.sharedWithIdentityId}</p>
+                <p>Shared: ${new Date(user.sharedAt).toLocaleDateString()}</p>
+                <p>Permissions: ${user.permissions || "read"}</p>
+                <hr>
+            </div>
+        `
+            )
+            .join("");
+    }
+
+    // Cognito Authentication Methods (keep all existing methods)
     async authenticateUser(username, password) {
         const authData = {
             AuthFlow: "USER_PASSWORD_AUTH",
@@ -704,200 +761,6 @@ class MediaLibraryApp {
         return await response.json();
     }
 
-    async shareLibrary() {
-        const ownerIdentityId = await this.getIdentityId();
-        if (!ownerIdentityId) {
-            this.showStatus("Not authenticated", "error");
-            return;
-        }
-        const shareWithIdentityId = document
-            .getElementById("share-with-input")
-            .value.trim();
-
-        if (!ownerIdentityId || !shareWithIdentityId) {
-            this.showStatus(
-                "Please enter Owner ID and username/email to share with",
-                "error"
-            );
-            return;
-        }
-
-        const button = document.getElementById("share-library-btn");
-        const originalText = button.textContent;
-        button.innerHTML = '<span class="loading"></span>Sharing...';
-        button.disabled = true;
-
-        try {
-            const result = await this.makeAuthenticatedRequest(
-                "POST",
-                `/libraries/${ownerIdentityId}/share`,
-                {
-                    shareWithIdentityId: shareWithIdentityId,
-                    permissions: "read",
-                }
-            );
-            this.displayApiResponse("Share Library", result);
-            this.showStatus("Library shared successfully!", "success");
-        } catch (error) {
-            this.displayApiResponse("Share Library Error", {
-                error: error.message,
-            });
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
-    }
-
-    async listSharedAccess() {
-        const ownerIdentityId = await this.getIdentityId();
-        if (!ownerIdentityId) {
-            this.showStatus("Not authenticated", "error");
-            return;
-        }
-
-        const button = document.getElementById("list-shared-access-btn");
-        const refreshButton = document.getElementById("refresh-sharing-btn");
-        const originalText = button.textContent;
-
-        button.innerHTML = '<span class="loading"></span>Loading...';
-        button.disabled = true;
-        refreshButton.disabled = true;
-
-        try {
-            const result = await this.makeAuthenticatedRequest(
-                "GET",
-                `/libraries/${ownerIdentityId}/share`
-            );
-            this.displaySharedAccess(result);
-            this.displayApiResponse("List Shared Access", result);
-        } catch (error) {
-            this.displayApiResponse("List Shared Access Error", {
-                error: error.message,
-            });
-            this.hideSharedAccessUI();
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-            refreshButton.disabled = false;
-        }
-    }
-
-    async removeSharedAccess() {
-        const ownerIdentityId = this.currentUser?.identityId;
-        const shareWithIdentityId = document
-            .getElementById("remove-user-id-input")
-            .value.trim();
-
-        if (!ownerIdentityId) {
-            this.showStatus("Not authenticated", "error");
-            return;
-        }
-
-        if (!shareWithIdentityId) {
-            this.showStatus("Please enter a user ID to remove", "error");
-            return;
-        }
-
-        const button = document.getElementById("remove-access-btn");
-        const originalText = button.textContent;
-        button.innerHTML = '<span class="loading"></span>Removing...';
-        button.disabled = true;
-
-        try {
-            const result = await this.makeAuthenticatedRequest(
-                "DELETE",
-                `/libraries/${ownerIdentityId}/share/${shareWithIdentityId}`
-            );
-
-            this.displayApiResponse("Remove Shared Access", result);
-            this.showStatus("Access removed successfully!", "success");
-
-            // Clear the input and refresh the list
-            document.getElementById("remove-user-id-input").value = "";
-            setTimeout(() => this.listSharedAccess(), 1000);
-        } catch (error) {
-            this.displayApiResponse("Remove Shared Access Error", {
-                error: error.message,
-            });
-            this.showStatus(
-                "Failed to remove access: " + error.message,
-                "error"
-            );
-        } finally {
-            button.textContent = originalText;
-            button.disabled = false;
-        }
-    }
-
-    displaySharedAccess(data) {
-        // Update stats
-        document.getElementById("total-shared-users").textContent =
-            data.totalSharedUsers || 0;
-        document.getElementById("library-access-type").textContent = (
-            data.libraryAccessType || "private"
-        ).toUpperCase();
-
-        // Show stats section
-        document.getElementById("sharing-stats").style.display = "grid";
-
-        // Display shared users
-        const container = document.getElementById("shared-users-container");
-        const usersList = document.getElementById("shared-users-list");
-
-        if (!data.sharedAccesses || data.sharedAccesses.length === 0) {
-            usersList.innerHTML =
-                '<div class="empty-state">No users have access to this library</div>';
-        } else {
-            usersList.innerHTML = data.sharedAccesses
-                .map(
-                    (user) => `
-                            <div class="shared-user-item">
-                                <div class="shared-user-info">
-                                    <h5>${user.username || "Unknown User"}</h5>
-                                    <p>
-                                        <strong>Email:</strong> ${
-                                            user.email || "N/A"
-                                        }<br>
-                                        <strong>User ID:</strong> ${
-                                            user.sharedWithIdentityId
-                                        }<br>
-                                        <strong>Shared:</strong> ${new Date(
-                                            user.sharedAt
-                                        ).toLocaleDateString()}<br>
-                                        <strong>Permissions:</strong> ${
-                                            user.permissions || "read"
-                                        }
-                                    </p>
-                                </div>
-                                <div class="shared-user-actions">
-                                    <button class="btn btn-danger btn-small" 
-                                            onclick="window.mediaLibraryApp.removeSpecificAccess('${
-                                                user.sharedWithUserId
-                                            }')">
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                        `
-                )
-                .join("");
-        }
-
-        container.style.display = "block";
-    }
-
-    async removeSpecificAccess(userId) {
-        // Pre-fill the remove input and trigger removal
-        document.getElementById("remove-user-id-input").value = userId;
-        await this.removeSharedAccess();
-    }
-
-    hideSharedAccessUI() {
-        document.getElementById("sharing-stats").style.display = "none";
-        document.getElementById("shared-users-container").style.display =
-            "none";
-    }
-
     getErrorMessage(error) {
         const errorMessage = error.message || error.toString();
 
@@ -929,19 +792,3 @@ class MediaLibraryApp {
 document.addEventListener("DOMContentLoaded", () => {
     window.mediaLibraryApp = new MediaLibraryApp();
 });
-
-// Add some helper functions for debugging
-window.debugAuth = {
-    getCurrentUser: () => window.mediaLibraryApp?.currentUser,
-    getTokens: () => ({
-        accessToken: localStorage.getItem("accessToken"),
-        idToken: localStorage.getItem("idToken"),
-        refreshToken: localStorage.getItem("refreshToken"),
-    }),
-    clearTokens: () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("idToken");
-        localStorage.removeItem("refreshToken");
-        console.log("Tokens cleared");
-    },
-};

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Media Library</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                color: #333;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 40px;
+            }
+
+            .header h1 {
+                color: white;
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            .header p {
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 1.1rem;
+            }
+
+            .card {
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                margin-bottom: 30px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .auth-section {
+                text-align: center;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+                text-align: left;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #555;
+            }
+
+            .form-group input {
+                width: 100%;
+                padding: 12px;
+                border: 2px solid #e1e5e9;
+                border-radius: 8px;
+                font-size: 16px;
+                transition: border-color 0.3s ease;
+            }
+
+            .form-group input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+            .btn {
+                padding: 12px 24px;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin: 5px;
+                min-width: 120px;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            }
+
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+
+            .btn-secondary:hover {
+                background: #5a6268;
+                transform: translateY(-1px);
+            }
+
+            .btn-success {
+                background: #28a745;
+                color: white;
+            }
+
+            .btn-success:hover {
+                background: #218838;
+                transform: translateY(-1px);
+            }
+
+            .btn-danger {
+                background: #dc3545;
+                color: white;
+            }
+
+            .btn-danger:hover {
+                background: #c82333;
+                transform: translateY(-1px);
+            }
+
+            .btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none !important;
+            }
+
+            .user-info {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+            .user-info h3 {
+                color: #495057;
+                margin-bottom: 10px;
+            }
+
+            .status {
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 20px;
+                font-weight: 500;
+            }
+
+            .status.success {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+
+            .status.error {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+
+            .status.info {
+                background: #d1ecf1;
+                color: #0c5460;
+                border: 1px solid #bee5eb;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            .button-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-top: 20px;
+            }
+
+            .library-list {
+                margin-top: 20px;
+            }
+
+            .library-item {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                border-left: 4px solid #667eea;
+            }
+
+            .library-item h4 {
+                margin-bottom: 5px;
+                color: #495057;
+            }
+
+            .library-item p {
+                color: #6c757d;
+                font-size: 0.9rem;
+            }
+
+            .loading {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid #f3f3f3;
+                border-top: 3px solid #667eea;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 10px;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .json-display {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 6px;
+                padding: 15px;
+                margin-top: 15px;
+                font-family: "Courier New", monospace;
+                font-size: 14px;
+                white-space: pre-wrap;
+                max-height: 400px;
+                overflow-y: auto;
+            }
+
+            .sharing-section {
+                margin-top: 20px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #28a745;
+            }
+
+            .shared-user-item {
+                display: flex;
+                justify-content: between;
+                align-items: center;
+                background: white;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 6px;
+                border: 1px solid #e9ecef;
+            }
+
+            .shared-user-info {
+                flex: 1;
+            }
+
+            .shared-user-info h5 {
+                margin: 0 0 5px 0;
+                color: #495057;
+            }
+
+            .shared-user-info p {
+                margin: 0;
+                font-size: 0.85rem;
+                color: #6c757d;
+            }
+
+            .shared-user-actions {
+                margin-left: 15px;
+            }
+
+            .btn-small {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+                min-width: auto;
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 30px;
+                color: #6c757d;
+                font-style: italic;
+            }
+
+            .tab-buttons {
+                display: flex;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #e9ecef;
+            }
+
+            .tab-button {
+                padding: 10px 20px;
+                background: none;
+                border: none;
+                border-bottom: 2px solid transparent;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 500;
+                color: #6c757d;
+                transition: all 0.3s ease;
+            }
+
+            .tab-button.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+            }
+
+            .tab-button:hover {
+                color: #667eea;
+            }
+
+            .tab-content {
+                display: none;
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+
+            .stat-card {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                border: 1px solid #e9ecef;
+            }
+
+            .stat-value {
+                font-size: 24px;
+                font-weight: bold;
+                color: #667eea;
+                margin-bottom: 5px;
+            }
+
+            .stat-label {
+                font-size: 12px;
+                color: #6c757d;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            @media (max-width: 768px) {
+                .container {
+                    padding: 10px;
+                }
+
+                .header h1 {
+                    font-size: 2rem;
+                }
+
+                .card {
+                    padding: 20px;
+                }
+
+                .button-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🎬 Media Library</h1>
+                <p>Your personal streaming media collection</p>
+            </div>
+
+            <!-- Authentication Section -->
+            <div id="auth-section" class="card auth-section">
+                <h2>Welcome</h2>
+                <p>Please sign in to access your media library</p>
+
+                <div id="login-form">
+                    <div class="form-group">
+                        <label for="username">Username or Email:</label>
+                        <input
+                            type="text"
+                            id="username"
+                            placeholder="Enter your username or email"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="Enter your password"
+                        />
+                    </div>
+                    <div class="button-grid">
+                        <button id="login-btn" class="btn btn-primary">
+                            Sign In
+                        </button>
+                        <button id="register-btn" class="btn btn-secondary">
+                            Register
+                        </button>
+                    </div>
+                </div>
+
+                <div id="register-form" class="hidden">
+                    <div class="form-group">
+                        <label for="reg-username">Username:</label>
+                        <input
+                            type="text"
+                            id="reg-username"
+                            placeholder="Choose a username"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email:</label>
+                        <input
+                            type="email"
+                            id="reg-email"
+                            placeholder="Enter your email"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password:</label>
+                        <input
+                            type="password"
+                            id="reg-password"
+                            placeholder="Choose a password"
+                        />
+                    </div>
+                    <div class="button-grid">
+                        <button id="signup-btn" class="btn btn-primary">
+                            Create Account
+                        </button>
+                        <button
+                            id="back-to-login-btn"
+                            class="btn btn-secondary"
+                        >
+                            Back to Login
+                        </button>
+                    </div>
+                </div>
+
+                <div id="verification-form" class="hidden">
+                    <h3>Verify Your Email</h3>
+                    <p>
+                        Please enter the verification code sent to your email:
+                    </p>
+                    <div class="form-group">
+                        <label for="verification-code"
+                            >Verification Code:</label
+                        >
+                        <input
+                            type="text"
+                            id="verification-code"
+                            placeholder="Enter 6-digit code"
+                        />
+                    </div>
+                    <div class="button-grid">
+                        <button id="verify-btn" class="btn btn-primary">
+                            Verify
+                        </button>
+                        <button id="resend-code-btn" class="btn btn-secondary">
+                            Resend Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Application Section -->
+            <div id="app-section" class="hidden">
+                <!-- User Info -->
+                <div class="card">
+                    <div class="user-info">
+                        <h3>👤 User Information</h3>
+                        <p id="user-details">Loading user information...</p>
+                    </div>
+                    <button id="logout-btn" class="btn btn-danger">
+                        Sign Out
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h3>📚 Library Management</h3>
+
+                    <!-- Tab Navigation -->
+                    <div class="tab-buttons">
+                        <button
+                            class="tab-button active"
+                            data-tab="basic-operations"
+                        >
+                            Basic Operations
+                        </button>
+                        <button
+                            class="tab-button"
+                            data-tab="sharing-management"
+                        >
+                            Sharing Management
+                        </button>
+                    </div>
+
+                    <!-- Basic Operations Tab -->
+                    <div id="basic-operations" class="tab-content active">
+                        <p>Test the media library API endpoints</p>
+
+                        <div class="button-grid">
+                            <button
+                                id="get-libraries-btn"
+                                class="btn btn-success"
+                            >
+                                Get My Libraries
+                            </button>
+                            <button
+                                id="get-library-json-btn"
+                                class="btn btn-success"
+                            >
+                                Get Library JSON
+                            </button>
+                            <button
+                                id="get-playlist-btn"
+                                class="btn btn-success"
+                            >
+                                Get Movie Playlist
+                            </button>
+                        </div>
+
+                        <!-- Test Inputs -->
+                        <div style="margin-top: 20px">
+                            <div class="form-group">
+                                <label for="owner-id-input"
+                                    >Owner ID (for library JSON):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="owner-id-input"
+                                    placeholder="Enter owner user ID"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="movie-id-input"
+                                    >Movie ID (for playlist):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="movie-id-input"
+                                    placeholder="Enter movie ID"
+                                />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="share-with-input"
+                                    >Share with (username or email):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="share-with-input"
+                                    placeholder="username or email@example.com"
+                                />
+                                <button
+                                    id="share-library-btn"
+                                    class="btn btn-primary"
+                                    style="margin-top: 10px"
+                                >
+                                    Share Library
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sharing Management Tab -->
+                    <div id="sharing-management" class="tab-content">
+                        <p>Manage who has access to your libraries</p>
+
+                        <div class="button-grid">
+                            <button
+                                id="list-shared-access-btn"
+                                class="btn btn-success"
+                            >
+                                View Shared Access
+                            </button>
+                            <button
+                                id="refresh-sharing-btn"
+                                class="btn btn-secondary"
+                            >
+                                Refresh
+                            </button>
+                        </div>
+
+                        <!-- Sharing Stats -->
+                        <div
+                            id="sharing-stats"
+                            class="stats-grid"
+                            style="display: none"
+                        >
+                            <div class="stat-card">
+                                <div class="stat-value" id="total-shared-users">
+                                    0
+                                </div>
+                                <div class="stat-label">Shared Users</div>
+                            </div>
+                            <div class="stat-card">
+                                <div
+                                    class="stat-value"
+                                    id="library-access-type"
+                                >
+                                    -
+                                </div>
+                                <div class="stat-label">Access Type</div>
+                            </div>
+                        </div>
+
+                        <!-- Shared Users List -->
+                        <div
+                            id="shared-users-container"
+                            class="sharing-section"
+                            style="display: none"
+                        >
+                            <h4>👥 Users with Access</h4>
+                            <div id="shared-users-list">
+                                <!-- Shared users will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Remove Access Form -->
+                        <div class="form-group" style="margin-top: 20px">
+                            <label for="remove-user-id-input"
+                                >Remove Access by User ID:</label
+                            >
+                            <div
+                                style="
+                                    display: flex;
+                                    gap: 10px;
+                                    align-items: end;
+                                "
+                            >
+                                <input
+                                    type="text"
+                                    id="remove-user-id-input"
+                                    placeholder="Enter user ID to remove"
+                                    style="flex: 1"
+                                />
+                                <button
+                                    id="remove-access-btn"
+                                    class="btn btn-danger"
+                                >
+                                    Remove Access
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section (keep as is) -->
+                <div class="card">
+                    <h3>📋 API Response</h3>
+                    <div id="api-response">
+                        <p>API responses will appear here...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Messages -->
+            <div id="status-message" class="hidden"></div>
+        </div>
+    </body>
+</html>

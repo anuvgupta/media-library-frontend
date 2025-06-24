@@ -119,20 +119,20 @@ module.exports = {
             },
         ],
     },
-    optimization: {
-        minimize: true, // Keep general minimization enabled
-        minimizer: [
-            new TerserPlugin({
-                terserOptions: {
-                    compress: {
-                        drop_console: !LOGS_ENABLED,
-                    },
-                },
-                exclude: /js\/generated-sdk/,
-            }),
-            new CssMinimizerPlugin(),
-        ],
-    },
+    // optimization: {
+    //     minimize: true, // Keep general minimization enabled
+    //     minimizer: [
+    //         new TerserPlugin({
+    //             terserOptions: {
+    //                 compress: {
+    //                     drop_console: !LOGS_ENABLED,
+    //                 },
+    //             },
+    //             exclude: /js\/generated-sdk/,
+    //         }),
+    //         new CssMinimizerPlugin(),
+    //     ],
+    // },
     plugins: [
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
@@ -140,13 +140,13 @@ module.exports = {
             filename: "index.html",
             chunks: ["main", "styles"],
             templateParameters: templateHelpers, // Use template helpers here
-            minify: {
-                removeAttributeQuotes: true,
-                collapseWhitespace: true,
-                removeComments: true,
-                minifyJS: true,
-                minifyCSS: true,
-            },
+            // minify: {
+            //     removeAttributeQuotes: true,
+            //     collapseWhitespace: true,
+            //     removeComments: true,
+            //     minifyJS: true,
+            //     minifyCSS: true,
+            // },
             inject: true,
         }),
         // new HtmlWebpackPlugin({
