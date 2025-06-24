@@ -295,6 +295,10 @@ class MediaLibraryApp {
         // Initialize AWS credentials
         await this.initializeAwsCredentials(idToken);
 
+        // Get Identity ID
+        const identityId = await this.getIdentityId();
+        this.currentUser.identityId = identityId;
+
         this.showAppSection();
         this.updateUserInfo();
         this.showStatus("Successfully signed in!", "success");
@@ -320,6 +324,16 @@ class MediaLibraryApp {
             console.log("AWS credentials initialized successfully");
         } catch (error) {
             console.error("Error initializing AWS credentials:", error);
+            throw error;
+        }
+    }
+
+    async getIdentityId() {
+        try {
+            const credentialsProvider = await this.credentials();
+            return credentialsProvider.identityId;
+        } catch (error) {
+            console.error("Error getting Identity ID:", error);
             throw error;
         }
     }
@@ -351,6 +365,7 @@ class MediaLibraryApp {
             <strong>Username:</strong> ${this.currentUser.username}<br>
             <strong>Email:</strong> ${this.currentUser.email}<br>
             <strong>User ID:</strong> ${this.currentUser.sub}
+            <strong>Identity ID:</strong> ${this.currentUser.identityId}
         `;
     }
 
@@ -420,9 +435,11 @@ class MediaLibraryApp {
     }
 
     async getLibraryJson() {
-        const ownerId = document.getElementById("owner-id-input").value.trim();
+        const ownerIdentityId = document
+            .getElementById("owner-id-input")
+            .value.trim();
         if (!ownerId) {
-            this.showStatus("Please enter an Owner ID", "error");
+            this.showStatus("Please enter an Owner Identity ID", "error");
             return;
         }
 
@@ -434,7 +451,7 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerId}/library`
+                `/libraries/${ownerIdentityId}/library`
             );
             this.displayApiResponse("Get Library JSON", result);
         } catch (error) {
@@ -448,10 +465,12 @@ class MediaLibraryApp {
     }
 
     async getPlaylist() {
-        const ownerId = document.getElementById("owner-id-input").value.trim();
+        const ownerIdentityId = document
+            .getElementById("owner-id-input")
+            .value.trim();
         const movieId = document.getElementById("movie-id-input").value.trim();
 
-        if (!ownerId || !movieId) {
+        if (!ownerIdentityId || !movieId) {
             this.showStatus("Please enter both Owner ID and Movie ID", "error");
             return;
         }
@@ -464,7 +483,7 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerId}/movies/${movieId}/playlist`
+                `/libraries/${ownerIdentityId}/movies/${movieId}/playlist`
             );
             this.displayApiResponse("Get Playlist", result);
         } catch (error) {
@@ -610,13 +629,16 @@ class MediaLibraryApp {
     }
 
     async shareLibrary() {
-        const ownerId = document.getElementById("owner-id-input").value.trim();
-        const shareWith = document
+        const ownerIdentityId = this.currentUser?.sub;
+        if (!ownerIdentityId) {
+            this.showStatus("Not authenticated", "error");
+            return;
+        }
+        const shareWithIdentityId = document
             .getElementById("share-with-input")
             .value.trim();
-        // const permissions = document.getElementById("share-permissions").value;
 
-        if (!ownerId || !shareWith) {
+        if (!ownerIdentityId || !shareWithIdentityId) {
             this.showStatus(
                 "Please enter Owner ID and username/email to share with",
                 "error"
@@ -632,9 +654,9 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "POST",
-                `/libraries/${ownerId}/share`,
+                `/libraries/${ownerIdentityId}/share`,
                 {
-                    shareWithIdentifier: shareWith,
+                    shareWithIdentityId: shareWithIdentityId,
                     permissions: "read",
                 }
             );
@@ -651,8 +673,8 @@ class MediaLibraryApp {
     }
 
     async listSharedAccess() {
-        const ownerId = this.currentUser?.sub;
-        if (!ownerId) {
+        const ownerIdentityId = this.currentUser?.identityId;
+        if (!ownerIdentityId) {
             this.showStatus("Not authenticated", "error");
             return;
         }
@@ -668,7 +690,7 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerId}/share`
+                `/libraries/${ownerIdentityId}/share`
             );
             this.displaySharedAccess(result);
             this.displayApiResponse("List Shared Access", result);
@@ -685,17 +707,17 @@ class MediaLibraryApp {
     }
 
     async removeSharedAccess() {
-        const ownerId = this.currentUser?.sub;
-        const userIdToRemove = document
+        const ownerIdentityId = this.currentUser?.identityId;
+        const shareWithIdentityId = document
             .getElementById("remove-user-id-input")
             .value.trim();
 
-        if (!ownerId) {
+        if (!ownerIdentityId) {
             this.showStatus("Not authenticated", "error");
             return;
         }
 
-        if (!userIdToRemove) {
+        if (!shareWithIdentityId) {
             this.showStatus("Please enter a user ID to remove", "error");
             return;
         }
@@ -708,7 +730,7 @@ class MediaLibraryApp {
         try {
             const result = await this.makeAuthenticatedRequest(
                 "DELETE",
-                `/libraries/${ownerId}/share/${userIdToRemove}`
+                `/libraries/${ownerIdentityId}/share/${shareWithIdentityId}`
             );
 
             this.displayApiResponse("Remove Shared Access", result);
@@ -761,7 +783,7 @@ class MediaLibraryApp {
                                             user.email || "N/A"
                                         }<br>
                                         <strong>User ID:</strong> ${
-                                            user.sharedWithUserId
+                                            user.sharedWithIdentityId
                                         }<br>
                                         <strong>Shared:</strong> ${new Date(
                                             user.sharedAt
