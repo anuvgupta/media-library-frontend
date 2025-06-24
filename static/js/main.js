@@ -533,9 +533,10 @@ class MediaLibraryApp {
                 (library) => `
             <div>
                 <h4>Library Owner: ${library.ownerIdentityId}</h4>
-                <button onclick="window.mediaLibraryApp.showLibraryView('${library.ownerIdentityId}')">
+                <button onclick="window.mediaLibraryApp.showLibraryView('${library.ownerIdentityId}')" >
                     View Library
                 </button>
+                <div class="section-spacer"></div>
                 <hr>
             </div>
         `
