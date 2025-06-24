@@ -95,7 +95,6 @@
                 Already have a verification code?
                 <button id="goto-verify-btn">Verify</button>
             </p>
-            <br />
             <p>
                 Already have an account?
                 <button id="show-signin-btn">Sign In</button>
@@ -111,6 +110,15 @@
             </p>
 
             <form onsubmit="return false;">
+                <div>
+                    <label for="verification-username">Username:</label><br />
+                    <input
+                        type="text"
+                        id="verification-username"
+                        placeholder="Enter your current username"
+                    />
+                </div>
+                <br />
                 <div>
                     <label for="verification-code">Verification Code:</label
                     ><br />

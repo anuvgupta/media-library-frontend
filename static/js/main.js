@@ -79,7 +79,7 @@ class MediaLibraryApp {
         const statusElement = document.getElementById("status-message");
         statusElement.textContent = message;
         // statusElement.style.display = "block";
-        statusElement.style.opacity = 0;
+        statusElement.style.opacity = 1;
 
         // Auto-hide after 5 seconds
         setTimeout(() => {
@@ -224,8 +224,16 @@ class MediaLibraryApp {
         const email = document.getElementById("signup-email").value.trim();
         const password = document.getElementById("signup-password").value;
 
-        if (!username || !email || !password) {
-            this.showStatus("Please fill in all fields");
+        if (!username) {
+            this.showStatus("Please choose a username");
+            return;
+        }
+        if (!email) {
+            this.showStatus("Please enter your email");
+            return;
+        }
+        if (!password) {
+            this.showStatus("Please choose a password");
             return;
         }
 
@@ -236,7 +244,7 @@ class MediaLibraryApp {
 
         try {
             await this.signUpUser(username, email, password);
-            this.pendingUsername = username;
+            document.getElementById("verification-username").value = username;
             this.showVerificationView();
             this.showStatus(
                 "Account created! Please check your email for verification code."
@@ -251,8 +259,15 @@ class MediaLibraryApp {
     }
 
     async handleVerification() {
+        const username = document
+            .getElementById("verification-username")
+            .value.trim();
         const code = document.getElementById("verification-code").value.trim();
 
+        if (!username) {
+            this.showStatus("Please enter your current username");
+            return;
+        }
         if (!code) {
             this.showStatus("Please enter the verification code");
             return;
@@ -264,7 +279,7 @@ class MediaLibraryApp {
         verifyBtn.disabled = true;
 
         try {
-            await this.confirmSignUp(this.pendingUsername, code);
+            await this.confirmSignUp(username, code);
             this.showStatus(
                 "Email verified successfully! You can now sign in."
             );
@@ -279,13 +294,16 @@ class MediaLibraryApp {
     }
 
     async resendVerificationCode() {
-        if (!this.pendingUsername) {
-            this.showStatus("No pending verification found");
+        const username = document
+            .getElementById("verification-username")
+            .value.trim();
+        if (!username) {
+            this.showStatus("Please enter your current username");
             return;
         }
 
         try {
-            await this.resendConfirmationCode(this.pendingUsername);
+            await this.resendConfirmationCode(username);
             this.showStatus("Verification code resent to your email");
         } catch (error) {
             console.error("Resend error:", error);
