@@ -513,14 +513,22 @@ class MediaLibraryApp {
             );
             this.libraries = result.ownedLibrary ? [result.ownedLibrary] : [];
             this.libraries = [...this.libraries, ...result.sharedLibraries];
-            this.displayLibraries();
+            await this.displayLibraries();
         } catch (error) {
             console.error("Error loading libraries:", error);
             this.showStatus("Error loading libraries: " + error.message);
         }
     }
 
-    displayLibraries() {
+    async getOwnerDescriptor(ownerIdentityId) {
+        const identityId = await this.getIdentityId();
+        if (ownerIdentityId === identityId) {
+            return `${this.currentUser.username} (you)`;
+        }
+        return `${ownerIdentityId}`;
+    }
+
+    async displayLibraries() {
         const container = document.getElementById("libraries-list");
 
         if (this.libraries.length === 0) {
@@ -528,20 +536,26 @@ class MediaLibraryApp {
             return;
         }
 
-        container.innerHTML = this.libraries
-            .map(
-                (library) => `
-            <div>
-                <h4>Library Owner: ${library.ownerIdentityId}</h4>
-                <button onclick="window.mediaLibraryApp.showLibraryView('${library.ownerIdentityId}')" >
-                    View Library
-                </button>
-                <div class="section-spacer"></div>
-                <hr>
-            </div>
-        `
+        container.innerHTML = (
+            await Promise.all(
+                this.libraries.map(
+                    async (library) => `
+                        <div>
+                            <h4>Library Owner: ${await this.getOwnerDescriptor(
+                                library.ownerIdentityId
+                            )}</h4>
+                            <button onclick="window.mediaLibraryApp.showLibraryView('${
+                                library.ownerIdentityId
+                            }')" >
+                                View Library
+                            </button>
+                            <div class="section-spacer"></div>
+                            <hr>
+                        </div>
+                    `
+                )
             )
-            .join("");
+        ).join("");
     }
 
     async loadLibraryData() {
