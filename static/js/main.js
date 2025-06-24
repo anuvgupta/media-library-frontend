@@ -29,6 +29,9 @@ class MediaLibraryApp {
             .getElementById("show-signin-btn")
             .addEventListener("click", () => this.showSigninView());
         document
+            .getElementById("back-to-signin-btn")
+            .addEventListener("click", () => this.showSigninView());
+        document
             .getElementById("signup-btn")
             .addEventListener("click", () => this.handleSignup());
         document
