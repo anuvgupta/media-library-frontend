@@ -632,6 +632,7 @@ class MediaLibraryApp {
                 "POST",
                 `/libraries/${this.currentUser.identityId}/share`,
                 {
+                    ownerUsername: this.currentUser.username,
                     shareWithIdentityId: shareWithInput,
                 }
             );
