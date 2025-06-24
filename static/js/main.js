@@ -520,12 +520,11 @@ class MediaLibraryApp {
         }
     }
 
-    async getOwnerDescriptor(ownerIdentityId) {
-        const identityId = await this.getIdentityId();
-        if (ownerIdentityId === identityId) {
+    getOwnerDescriptor(currentIdentityId, ownerIdentityId, ownerUsername = "") {
+        if (ownerIdentityId === currentIdentityId) {
             return `${this.currentUser.username}`;
         }
-        return `${ownerIdentityId}`;
+        return ownerUsername;
     }
 
     async displayLibraries() {
@@ -536,26 +535,28 @@ class MediaLibraryApp {
             return;
         }
 
-        container.innerHTML = (
-            await Promise.all(
-                this.libraries.map(
-                    async (library) => `
-                        <div>
-                            <h4>${await this.getOwnerDescriptor(
-                                library.ownerIdentityId
-                            )}'s Library</h4>
-                            <button onclick="window.mediaLibraryApp.showLibraryView('${
-                                library.ownerIdentityId
-                            }')" >
-                                View Library
-                            </button>
-                            <div class="section-spacer"></div>
-                            <hr>
-                        </div>
-                    `
-                )
+        const identityId = await this.getIdentityId();
+
+        container.innerHTML = this.libraries
+            .map(
+                (library) => `
+                <div>
+                    <h4>${this.getOwnerDescriptor(
+                        identityId,
+                        library.ownerIdentityId,
+                        library.ownerUsername ?? ""
+                    )}'s Library</h4>
+                    <button onclick="window.mediaLibraryApp.showLibraryView('${
+                        library.ownerIdentityId
+                    }')" >
+                        View Library
+                    </button>
+                    <div class="section-spacer"></div>
+                    <hr>
+                </div>
+            `
             )
-        ).join("");
+            .join("");
     }
 
     async loadLibraryData() {
