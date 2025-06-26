@@ -13,6 +13,7 @@ class MediaLibraryApp {
         this.currentLibraryOwner = null;
         this.currentLibraryData = null;
         this.libraries = [];
+        this.currentMovie = null;
         this.initializeEventListeners();
         this.checkExistingSession();
     }
@@ -49,11 +50,19 @@ class MediaLibraryApp {
         document
             .getElementById("logout-btn-libraries")
             .addEventListener("click", () => this.handleLogout());
+        document
+            .getElementById("logout-btn-movie")
+            .addEventListener("click", () => this.handleLogout());
 
         // Navigation buttons
         document
             .getElementById("back-to-libraries-btn")
             .addEventListener("click", () => this.showLibrariesView());
+        document
+            .getElementById("back-to-library-btn")
+            .addEventListener("click", () =>
+                this.showLibraryView(this.currentLibraryOwner)
+            );
 
         // Library sharing
         document
@@ -136,6 +145,16 @@ class MediaLibraryApp {
         }
     }
 
+    showMovieView(movie) {
+        this.hideAllViews();
+        this.currentMovie = movie;
+        document.getElementById("movie-view").style.display = "block";
+        document.getElementById("movie-title").textContent =
+            movie.name || "Unknown Title";
+        this.updateAccountSection();
+        // Movie content will be loaded here later
+    }
+
     hideAllViews() {
         const views = [
             "signin-view",
@@ -143,6 +162,7 @@ class MediaLibraryApp {
             "verification-view",
             "libraries-view",
             "library-view",
+            "movie-view",
         ];
         views.forEach((view) => {
             document.getElementById(view).style.display = "none";
@@ -599,12 +619,17 @@ class MediaLibraryApp {
         <h3>Movies (${allMovies.length})</h3>
         ${allMovies
             .map(
-                (movie) => `
+                (movie, index) => `
                 <div>
                     <h4>${movie.name || "Unknown Title"}</h4>
                     <p>Year: ${movie.year || "Unknown"}</p>
                     <p>Runtime: ${movie.runtime || "Unknown"}</p>
                     <p>Quality: ${movie.quality || "Unknown"}</p>
+                    <button onclick="window.mediaLibraryApp.showMovieView(${JSON.stringify(
+                        movie
+                    ).replace(/"/g, "&quot;")})">
+                        Play Movie
+                    </button>
                     <hr>
                 </div>
             `
