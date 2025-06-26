@@ -60,9 +60,10 @@ class MediaLibraryApp {
             .addEventListener("click", () => this.showLibrariesView());
         document
             .getElementById("back-to-library-btn")
-            .addEventListener("click", () =>
-                this.showLibraryView(this.currentLibraryOwner)
-            );
+            .addEventListener("click", () => {
+                this.updateMovieDescription();
+                this.showLibraryView(this.currentLibraryOwner);
+            });
 
         // Library sharing
         document
@@ -161,6 +162,10 @@ class MediaLibraryApp {
             movie.quality || "Unknown";
 
         this.updateAccountSection();
+
+        // Load movie metadata
+        this.loadMovieMetadata(movie);
+
         // Movie content will be loaded here later
     }
 
@@ -720,6 +725,60 @@ class MediaLibraryApp {
         `
             )
             .join("");
+    }
+
+    async loadMovieMetadata(movie) {
+        try {
+            const queryParams = new URLSearchParams();
+            if (movie.name) {
+                queryParams.append("query", movie.name);
+            }
+            if (movie.year) {
+                queryParams.append("year", movie.year);
+            }
+
+            // Make regular fetch request without authentication
+            const response = await fetch(
+                `${CONFIG.apiEndpoint}/metadata?${queryParams.toString()}`
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}: ${await response.text()}`
+                );
+            }
+
+            const result = await response.json();
+            console.log("Movie metadata:", result);
+            this.updateMovieDescription(result);
+        } catch (error) {
+            console.error("Error loading movie metadata:", error);
+            this.showStatus("Error loading movie details: " + error.message);
+            this.updateMovieDescription(null);
+        }
+    }
+
+    updateMovieDescription(metadata) {
+        // Find the description paragraph in the movie view
+        const descriptionParagraph =
+            document.getElementById("movie-description");
+
+        if (metadata && metadata.results && metadata.results.length > 0) {
+            // Get the first result from the API response
+            const movieData = metadata.results[0];
+
+            if (movieData.overview) {
+                // Update with actual movie description
+                descriptionParagraph.textContent = movieData.overview;
+            } else {
+                descriptionParagraph.textContent =
+                    "No description available for this movie.";
+            }
+        } else {
+            // Fallback if no results are available
+            descriptionParagraph.textContent =
+                "No description available for this movie.";
+        }
     }
 
     // Cognito Authentication Methods (keep all existing methods)
