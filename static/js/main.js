@@ -151,6 +151,15 @@ class MediaLibraryApp {
         document.getElementById("movie-view").style.display = "block";
         document.getElementById("movie-title").textContent =
             movie.name || "Unknown Title";
+
+        // Update movie details
+        document.getElementById("movie-year").textContent =
+            movie.year || "Unknown";
+        document.getElementById("movie-runtime").textContent =
+            movie.runtime || "Unknown";
+        document.getElementById("movie-quality").textContent =
+            movie.quality || "Unknown";
+
         this.updateAccountSection();
         // Movie content will be loaded here later
     }
@@ -630,6 +639,7 @@ class MediaLibraryApp {
                     ).replace(/"/g, "&quot;")})">
                         Play Movie
                     </button>
+                    <div class="section-spacer"></div>
                     <hr>
                 </div>
             `

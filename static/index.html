@@ -150,6 +150,8 @@
 
             <hr />
 
+            <div class="section-spacer"></div>
+
             <!-- Libraries Section -->
             <div>
                 <h2>Libraries</h2>
@@ -176,6 +178,8 @@
 
             <br />
 
+            <div class="section-spacer"></div>
+
             <button id="back-to-libraries-btn">← Back to Libraries</button>
 
             <div class="section-spacer"></div>
@@ -194,8 +198,8 @@
                 </p>
                 <form onsubmit="return false;">
                     <div>
-                        <label for="share-with-input">Username or Email:</label
-                        ><br />
+                        <label for="share-with-input">Username or Email:</label>
+                        <br />
                         <input
                             type="text"
                             id="share-with-input"
@@ -237,17 +241,69 @@
 
             <br />
 
+            <div class="section-spacer"></div>
+
             <button id="back-to-library-btn">← Back to Library</button>
 
             <div class="section-spacer"></div>
 
             <hr />
 
+            <div class="section-spacer"></div>
+
             <!-- Movie Content Section -->
             <div>
                 <h2 id="movie-title">Movie Title</h2>
-                <div id="movie-content">
-                    <!-- Movie player will go here -->
+
+                <!-- Video Player Spacer -->
+                <div
+                    id="video-player-container"
+                    style="
+                        width: 100%;
+                        height: 400px;
+                        background-color: #f0f0f0;
+                        border: 2px dashed #ccc;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 20px;
+                        color: #666;
+                        font-size: 18px;
+                    "
+                >
+                    Video Player Will Go Here
+                </div>
+
+                <!-- Movie Details -->
+                <div style="margin-bottom: 20px">
+                    <p>
+                        <strong>Year:</strong>
+                        <span id="movie-year">Unknown</span>
+                    </p>
+                    <p>
+                        <strong>Runtime:</strong>
+                        <span id="movie-runtime">Unknown</span>
+                    </p>
+                    <p>
+                        <strong>Quality:</strong>
+                        <span id="movie-quality">Unknown</span>
+                    </p>
+                </div>
+
+                <!-- Description Section -->
+                <div>
+                    <h3>Description</h3>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                        Sed do eiusmod tempor incididunt ut labore et dolore
+                        magna aliqua. Ut enim ad minim veniam, quis nostrud
+                        exercitation ullamco laboris nisi ut aliquip ex ea
+                        commodo consequat. Duis aute irure dolor in
+                        reprehenderit in voluptate velit esse cillum dolore eu
+                        fugiat nulla pariatur. Excepteur sint occaecat cupidatat
+                        non proident, sunt in culpa qui officia deserunt mollit
+                        anim id est laborum.
+                    </p>
                 </div>
             </div>
         </div>
