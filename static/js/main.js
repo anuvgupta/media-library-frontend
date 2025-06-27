@@ -15,6 +15,7 @@ class MediaLibraryApp {
         this.libraries = [];
         this.currentMovie = null;
         this.initializeEventListeners();
+        this.showLoadingView();
         this.checkExistingSession();
     }
 
@@ -171,6 +172,7 @@ class MediaLibraryApp {
 
     hideAllViews() {
         const views = [
+            "loading-view",
             "signin-view",
             "signup-view",
             "verification-view",
@@ -181,6 +183,11 @@ class MediaLibraryApp {
         views.forEach((view) => {
             document.getElementById(view).style.display = "none";
         });
+    }
+
+    showLoadingView() {
+        this.hideAllViews();
+        document.getElementById("loading-view").style.display = "block";
     }
 
     updateAccountSection() {
