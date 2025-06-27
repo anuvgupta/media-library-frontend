@@ -229,9 +229,15 @@ class MediaLibraryApp {
         this.showSigninView();
     }
 
-    async handleLogin() {
-        const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value;
+    async handleLogin(fromVerify = false) {
+        let username = document.getElementById("username").value.trim();
+        let password = document.getElementById("password").value;
+        if (fromVerify) {
+            username = document
+                .getElementById("verification-username")
+                .value.trim();
+            password = document.getElementById("verification-password").value;
+        }
 
         if (!username || !password) {
             this.showStatus("Please enter both username and password");
@@ -256,6 +262,7 @@ class MediaLibraryApp {
         } finally {
             loginBtn.textContent = originalText;
             loginBtn.disabled = false;
+            this.clearPasswordInputs();
         }
     }
 
@@ -287,6 +294,7 @@ class MediaLibraryApp {
         try {
             await this.signUpUser(username, email, password);
             document.getElementById("verification-username").value = username;
+            document.getElementById("verification-password").value = password;
             this.showVerificationView();
             this.showStatus(
                 "Account created! Please check your email for verification code."
@@ -304,10 +312,15 @@ class MediaLibraryApp {
         const username = document
             .getElementById("verification-username")
             .value.trim();
+        const password = document.getElementById("verification-password").value;
         const code = document.getElementById("verification-code").value.trim();
 
         if (!username) {
             this.showStatus("Please enter your current username");
+            return;
+        }
+        if (!password) {
+            this.showStatus("Please enter your current password");
             return;
         }
         if (!code) {
@@ -322,17 +335,28 @@ class MediaLibraryApp {
 
         try {
             await this.confirmSignUp(username, code);
-            this.showStatus(
-                "Email verified successfully! You can now sign in."
-            );
-            this.showSigninView();
+            await this.handleLogin(true);
+            try {
+                await this.initializeUserLibrary();
+            } catch (libraryError) {
+                console.error("Library initialization failed:", libraryError);
+                // Don't fail the entire verification - they can still use the app
+            }
+            this.showStatus("Email verified successfully!");
         } catch (error) {
             console.error("Verification error:", error);
             this.showStatus(this.getErrorMessage(error));
         } finally {
             verifyBtn.textContent = originalText;
             verifyBtn.disabled = false;
+            this.clearPasswordInputs();
         }
+    }
+
+    clearPasswordInputs() {
+        document.getElementById("password").value = "";
+        document.getElementById("signup-password").value = "";
+        document.getElementById("verification-password").value = "";
     }
 
     async resendVerificationCode() {
@@ -376,8 +400,81 @@ class MediaLibraryApp {
         const identityId = await this.getIdentityId();
         this.currentUser.identityId = identityId;
 
+        // Try to ensure library is initialized (fallback for failed verification init)
+        try {
+            await this.ensureLibraryExists();
+        } catch (error) {
+            console.log("Library check/init on login:", error);
+        }
+
         this.showLibrariesView();
         this.showStatus("Successfully signed in!");
+    }
+
+    async ensureLibraryExists() {
+        try {
+            const identityId = await this.getIdentityId();
+            // Check if library access exists
+            await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${identityId}/access`
+            );
+        } catch (error) {
+            if (error.statusCode === 404) {
+                // Library doesn't exist, initialize it
+                await this.initializeUserLibrary();
+                console.log("Library initialized on login (fallback)");
+            } else if (error.statusCode === 403) {
+                // This shouldn't happen since we're checking our own library
+                console.error(
+                    "Access denied to own library - this shouldn't happen"
+                );
+            } else {
+                // For other errors (500, network issues, etc.), assume library exists
+                console.log(
+                    "Library check failed with status:",
+                    error.statusCode || "unknown",
+                    "- assuming library exists"
+                );
+            }
+        }
+    }
+
+    async initializeUserLibrary() {
+        const DEFAULT_LAST_SCAN_AT = "2000-01-01T00:00:00.000Z";
+        try {
+            // Get Identity ID
+            const identityId = await this.getIdentityId();
+
+            // Make the API call to initialize library
+            await this.makeAuthenticatedRequest(
+                "POST",
+                `/libraries/${identityId}/access`,
+                {
+                    movieCount: 0,
+                    collectionCount: 0,
+                    lastScanAt: DEFAULT_LAST_SCAN_AT,
+                }
+            );
+
+            console.log("User library initialized successfully");
+        } catch (error) {
+            console.error("Error initializing user library:", error);
+            // Don't throw - verification was successful, library init is secondary
+            if (error.statusCode === 409) {
+                // Library already exists - this is fine
+                console.log("Library already exists");
+            } else if (error.statusCode === 401) {
+                console.error(
+                    "Authentication failed during library initialization"
+                );
+            } else {
+                console.error(
+                    "Unexpected error during library initialization:",
+                    error.statusCode
+                );
+            }
+        }
     }
 
     async initializeAwsCredentials(idToken) {
@@ -509,7 +606,13 @@ class MediaLibraryApp {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error("Error response:", errorText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+                // Create error with status code property
+                const error = new Error(
+                    `HTTP ${response.status}: ${errorText}`
+                );
+                error.statusCode = response.status;
+                error.responseText = errorText;
+                throw error;
             }
 
             // Parse response based on content type
@@ -532,6 +635,11 @@ class MediaLibraryApp {
                 stack: error.stack,
                 name: error.name,
             });
+
+            // If it's already our custom error with statusCode, re-throw it
+            if (error.statusCode) {
+                throw error;
+            }
 
             // Provide more specific error messages
             if (error.message.includes("fetch")) {
@@ -557,7 +665,18 @@ class MediaLibraryApp {
             await this.displayLibraries();
         } catch (error) {
             console.error("Error loading libraries:", error);
-            this.showStatus("Error loading libraries: " + error.message);
+            if (error.statusCode === 403) {
+                this.showStatus("Access denied. Please sign in again.");
+                this.handleLogout();
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error loading libraries: " +
+                        (error.message || "Unknown error")
+                );
+            }
         }
     }
 
@@ -610,7 +729,21 @@ class MediaLibraryApp {
             this.displayLibraryData();
         } catch (error) {
             console.error("Error loading library data:", error);
-            this.showStatus("Error loading library data: " + error.message);
+            if (error.statusCode === 403) {
+                this.showStatus("Access denied to this library");
+                this.showLibrariesView(); // Go back to libraries view
+            } else if (error.statusCode === 404) {
+                this.showStatus("Library not found");
+                this.showLibrariesView();
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error loading library data: " +
+                        (error.message || "Unknown error")
+                );
+            }
         }
     }
 
@@ -690,7 +823,22 @@ class MediaLibraryApp {
             this.loadSharedUsers(); // Refresh the shared users list
         } catch (error) {
             console.error("Error sharing library:", error);
-            this.showStatus("Error sharing library: " + error.message);
+
+            if (error.statusCode === 400) {
+                this.showStatus("Invalid user ID or email provided");
+            } else if (error.statusCode === 403) {
+                this.showStatus("You can only share your own library");
+            } else if (error.statusCode === 404) {
+                this.showStatus("User not found or library doesn't exist");
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error sharing library: " +
+                        (error.message || "Unknown error")
+                );
+            }
         } finally {
             button.textContent = originalText;
             button.disabled = false;
@@ -706,7 +854,20 @@ class MediaLibraryApp {
             this.displaySharedUsers(result);
         } catch (error) {
             console.error("Error loading shared users:", error);
-            this.showStatus("Error loading shared users: " + error.message);
+
+            if (error.statusCode === 403) {
+                this.showStatus("Access denied");
+            } else if (error.statusCode === 404) {
+                this.showStatus("Library not found");
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error loading shared users: " +
+                        (error.message || "Unknown error")
+                );
+            }
         }
     }
 
