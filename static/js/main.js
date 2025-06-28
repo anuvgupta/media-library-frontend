@@ -121,11 +121,11 @@ class MediaLibraryApp {
         document.getElementById("verification-view").style.display = "block";
     }
 
-    showLibrariesView() {
+    showLibrariesView(checkLibraryAccess = false) {
         this.hideAllViews();
         document.getElementById("libraries-view").style.display = "block";
         this.updateAccountSection();
-        this.loadLibraries();
+        this.loadLibraries(checkLibraryAccess);
     }
 
     showLibraryView(ownerIdentityId) {
@@ -402,14 +402,7 @@ class MediaLibraryApp {
         const identityId = await this.getIdentityId();
         this.currentUser.identityId = identityId;
 
-        // Try to ensure library is initialized (fallback for failed verification init)
-        try {
-            await this.ensureLibraryExists();
-        } catch (error) {
-            console.log("Library check/init on login:", error);
-        }
-
-        this.showLibrariesView();
+        this.showLibrariesView(true);
         this.showStatus("Successfully signed in!");
     }
 
@@ -670,12 +663,24 @@ class MediaLibraryApp {
         }
     }
 
-    async loadLibraries() {
+    async loadLibraries(checkLibraryAccess = false) {
         try {
-            const result = await this.makeAuthenticatedRequest(
+            let result = await this.makeAuthenticatedRequest(
                 "GET",
                 "/libraries"
             );
+            if (!result.ownedLibrary && checkLibraryAccess === true) {
+                // Ensure library is initialized (fallback for failed verification init)
+                try {
+                    await this.ensureLibraryExists();
+                } catch (error) {
+                    console.log("Failed to ensure library exists:", error);
+                }
+                result = await this.makeAuthenticatedRequest(
+                    "GET",
+                    "/libraries"
+                );
+            }
             this.libraries = result.ownedLibrary ? [result.ownedLibrary] : [];
             this.libraries = [...this.libraries, ...result.sharedLibraries];
             await this.displayLibraries();
