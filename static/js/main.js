@@ -733,8 +733,10 @@ class MediaLibraryApp {
                 this.showStatus("Access denied to this library");
                 this.showLibrariesView(); // Go back to libraries view
             } else if (error.statusCode === 404) {
-                this.showStatus("Library not found");
-                this.showLibrariesView();
+                // this.showStatus("Library not found");
+                // this.showLibrariesView();
+                this.currentLibraryData = null;
+                this.displayLibraryData();
             } else if (error.statusCode === 401) {
                 this.showStatus("Session expired. Please sign in again.");
                 this.handleLogout();
