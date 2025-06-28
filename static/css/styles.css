@@ -41,6 +41,10 @@ div#movie-details-container {
     display: flex;
 }
 
+div#movie-details-content {
+    flex: 1;
+}
+
 div#poster-container {
     width: 120px;
     height: auto;
