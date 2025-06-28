@@ -59,12 +59,18 @@ class MediaLibraryApp {
         // Navigation buttons
         document
             .getElementById("back-to-libraries-btn")
-            .addEventListener("click", () => this.showLibrariesView());
+            .addEventListener("click", () => {
+                this.showLibrariesView();
+                this.clearLibraryPageContent();
+                this.clearMoviePageContent();
+                this.updateMovieDescription();
+            });
         document
             .getElementById("back-to-library-btn")
             .addEventListener("click", () => {
-                this.updateMovieDescription();
                 this.showLibraryView(this.currentLibraryOwner);
+                this.clearMoviePageContent();
+                this.updateMovieDescription();
             });
 
         // Library sharing
@@ -1226,16 +1232,28 @@ class MediaLibraryApp {
         }
     }
 
-    clearContentSections() {
-        // Clear content sections
-        document.getElementById("libraries-list").innerHTML =
-            "<p>Loading libraries...</p>";
+    clearLibraryPageContent() {
         document.getElementById("library-content").innerHTML =
             "<p>Loading library contents...</p>";
         document.getElementById("shared-users-list").innerHTML =
             "<p>Loading shared users...</p>";
-        document.getElementById("movie-description").textContent = "Loading...";
+    }
 
+    clearLibrariesPageContent() {
+        document.getElementById("libraries-list").innerHTML =
+            "<p>Loading libraries...</p>";
+    }
+
+    clearMoviePageContent() {
+        // Reset movie details
+        document.getElementById("movie-description").textContent = "Loading...";
+        document.getElementById("movie-title").textContent = "Movie Title";
+        document.getElementById("movie-year").textContent = "Unknown";
+        document.getElementById("movie-runtime").textContent = "Unknown";
+        document.getElementById("movie-quality").textContent = "Unknown";
+    }
+
+    clearAccountContent() {
         // Clear account sections
         const accountElements = document.querySelectorAll(
             ".account-section-content"
@@ -1243,12 +1261,14 @@ class MediaLibraryApp {
         accountElements.forEach((element) => {
             element.innerHTML = "";
         });
+    }
 
-        // Reset movie details
-        document.getElementById("movie-title").textContent = "Movie Title";
-        document.getElementById("movie-year").textContent = "Unknown";
-        document.getElementById("movie-runtime").textContent = "Unknown";
-        document.getElementById("movie-quality").textContent = "Unknown";
+    clearContentSections() {
+        // Clear content sections
+        clearLibrariesPageContent();
+        clearLibraryPageContent();
+        clearMoviePageContent();
+        clearAccountContent();
     }
 }
 
