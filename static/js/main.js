@@ -397,6 +397,7 @@ class MediaLibraryApp {
         await this.initializeAwsCredentials(idToken);
 
         // Get Identity ID
+        this.currentUser.identityId = null;
         const identityId = await this.getIdentityId();
         this.currentUser.identityId = identityId;
 
@@ -503,6 +504,10 @@ class MediaLibraryApp {
     }
 
     async getIdentityId() {
+        if (this.currentUser.identityId) {
+            return this.currentUser.identityId;
+        }
+
         try {
             const credentialsProvider = await this.credentials();
             return credentialsProvider.identityId;
