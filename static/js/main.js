@@ -971,11 +971,13 @@ class MediaLibraryApp {
                         user.sharedAt
                     ).toLocaleDateString()}</p>
                     ${
-                        user.updatedAt && user.updatedAt !== user.sharedAt
-                            ? `<p class="updated-date">Updated: ${new Date(
-                                  user.updatedAt
-                              ).toLocaleDateString()}</p>`
-                            : ""
+                        // user.updatedAt && user.updatedAt !==
+                        // user.sharedAt
+                        //     ? `<p class="updated-date">Updated: ${new Date(
+                        //           user.updatedAt
+                        //       ).toLocaleDateString()}</p>`
+                        //     : ""
+                        ""
                     }
                 </div>
                 <div class="shared-user-actions">
