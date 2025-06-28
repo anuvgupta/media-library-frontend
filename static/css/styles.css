@@ -11,6 +11,7 @@ body {
 
 .section-spacer {
     margin-bottom: 20px;
+    height: 1px;
 }
 
 /* Media query for mobile screens */
