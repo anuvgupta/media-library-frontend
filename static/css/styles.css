@@ -37,6 +37,10 @@ body {
     color: #666;
 }
 
+input {
+    padding: 4px 5px;
+}
+
 button {
     background-color: #007bff;
     color: white;
