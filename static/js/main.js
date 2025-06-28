@@ -510,6 +510,7 @@ class MediaLibraryApp {
 
         try {
             const credentialsProvider = await this.credentials();
+            this.currentUser.identityId = credentialsProvider.identityId;
             return credentialsProvider.identityId;
         } catch (error) {
             console.error("Error getting Identity ID:", error);
