@@ -1093,6 +1093,7 @@ class MediaLibraryApp {
                 posterImg.style.width = "100%";
                 posterImg.style.height = "auto";
                 posterImg.style.objectFit = "contain";
+                posterImg.style.borderRadius = "4px";
 
                 // Append the image to the poster container
                 posterContainer.appendChild(posterImg);
