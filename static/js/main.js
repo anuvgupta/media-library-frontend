@@ -989,7 +989,6 @@ class MediaLibraryApp {
                         Remove Access
                     </button>
                 </div>
-                <hr>
             </div>
         `
             )
