@@ -38,7 +38,7 @@ body {
 }
 
 button {
-    background-color: #00aeff;
+    background-color: #115dba;
     color: white;
     border: none;
     padding: 5px 10px;
@@ -47,7 +47,7 @@ button {
 }
 
 button:hover {
-    background-color: #1cb5fc;
+    background-color: #2168bf;
 }
 
 button.remove-access-btn {
