@@ -444,13 +444,14 @@ class MediaLibraryApp {
         const DEFAULT_LAST_SCAN_AT = "2000-01-01T00:00:00.000Z";
         try {
             // Get Identity ID
-            const identityId = await this.getIdentityId();
+            const ownerIdentityId = await this.getIdentityId();
 
             // Make the API call to initialize library
             await this.makeAuthenticatedRequest(
                 "POST",
-                `/libraries/${identityId}/access`,
+                `/libraries/${ownerIdentityId}/access`,
                 {
+                    ownerUsername: this.currentUser.username,
                     movieCount: 0,
                     collectionCount: 0,
                     lastScanAt: DEFAULT_LAST_SCAN_AT,
@@ -680,7 +681,11 @@ class MediaLibraryApp {
         }
     }
 
-    getOwnerDescriptor(currentIdentityId, ownerIdentityId, ownerUsername = "") {
+    getOwnerDescriptor(
+        currentIdentityId,
+        ownerIdentityId,
+        ownerUsername = "Unknown"
+    ) {
         if (ownerIdentityId === currentIdentityId) {
             return `${this.currentUser.username}`;
         }
@@ -887,14 +892,14 @@ class MediaLibraryApp {
                 (user) => `
             <div>
                 <p>Username: ${user.username || "Unknown"}</p>
-                <p>Email: ${user.email || "N/A"}</p>
-                <p>User ID: ${user.sharedWithIdentityId}</p>
                 <p>Shared: ${new Date(user.sharedAt).toLocaleDateString()}</p>
                 <hr>
             </div>
         `
             )
             .join("");
+        // <p>Email: ${user.email || "N/A"}</p>
+        // <p>User ID: ${user.sharedWithIdentityId}</p>
     }
 
     async loadMovieMetadata(movie) {
