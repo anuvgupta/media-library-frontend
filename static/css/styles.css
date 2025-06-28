@@ -19,6 +19,12 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
+    width: 100%;
+    max-width: 400px;
+}
+
+.shared-user-info {
+    flex: 1;
 }
 
 .shared-user-info p {
@@ -31,7 +37,20 @@ body {
     color: #666;
 }
 
-.remove-access-btn {
+button {
+    background-color: #00aeff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #1cb5fc;
+}
+
+button.remove-access-btn {
     background-color: #dc3545;
     color: white;
     border: none;
@@ -40,7 +59,7 @@ body {
     cursor: pointer;
 }
 
-.remove-access-btn:hover {
+button.remove-access-btn:hover {
     background-color: #c82333;
 }
 
