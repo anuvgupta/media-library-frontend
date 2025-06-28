@@ -10,6 +10,7 @@ class MediaLibraryApp {
         this.currentUser = null;
         this.cognitoIdentityClient = null;
         this.credentials = null;
+        this.currentCredentialsProvider = null;
         this.currentLibraryOwner = null;
         this.currentLibraryData = null;
         this.libraries = [];
@@ -495,7 +496,7 @@ class MediaLibraryApp {
             });
 
             // Test the credentials
-            await this.credentials();
+            await this.getFreshCredentials();
             console.log("AWS credentials initialized successfully");
         } catch (error) {
             console.error("Error initializing AWS credentials:", error);
@@ -509,9 +510,12 @@ class MediaLibraryApp {
         }
 
         try {
-            const credentialsProvider = await this.credentials();
-            this.currentUser.identityId = credentialsProvider.identityId;
-            return credentialsProvider.identityId;
+            if (!this.currentCredentialsProvider) {
+                await this.getFreshCredentials();
+            }
+            this.currentUser.identityId =
+                this.currentCredentialsProvider.identityId;
+            return this.currentUser.identityId;
         } catch (error) {
             console.error("Error getting Identity ID:", error);
             throw error;
@@ -531,6 +535,11 @@ class MediaLibraryApp {
         this.showStatus("Successfully signed out");
     }
 
+    async getFreshCredentials() {
+        this.currentCredentialsProvider = await this.credentials();
+        return this.currentCredentialsProvider;
+    }
+
     async makeAuthenticatedRequest(method, path, body = null) {
         if (!this.credentials) {
             throw new Error("Not authenticated - no AWS credentials available");
@@ -538,7 +547,7 @@ class MediaLibraryApp {
 
         try {
             // Get fresh credentials
-            const awsCredentials = await this.credentials();
+            const awsCredentials = await this.getFreshCredentials();
 
             if (!awsCredentials) {
                 throw new Error("Failed to obtain AWS credentials");
@@ -1109,7 +1118,15 @@ class MediaLibraryApp {
     }
 }
 
+function onDOMReady(callback) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", callback, { once: true });
+    } else {
+        callback();
+    }
+}
+
 // Initialize the app when the page loads
-document.addEventListener("DOMContentLoaded", () => {
+onDOMReady((_) => {
     window.mediaLibraryApp = new MediaLibraryApp();
 });
