@@ -526,6 +526,7 @@ class MediaLibraryApp {
         this.libraries = [];
         this.showSigninView();
         this.showStatus("Successfully signed out");
+        this.clearContentSections();
     }
 
     async getFreshCredentials() {
@@ -1120,6 +1121,31 @@ class MediaLibraryApp {
         } else {
             return errorMessage;
         }
+    }
+
+    clearContentSections() {
+        // Clear content sections
+        document.getElementById("libraries-list").innerHTML =
+            "<p>Loading libraries...</p>";
+        document.getElementById("library-content").innerHTML =
+            "<p>Loading library contents...</p>";
+        document.getElementById("shared-users-list").innerHTML =
+            "<p>Loading shared users...</p>";
+        document.getElementById("movie-description").textContent = "Loading...";
+
+        // Clear account sections
+        const accountElements = document.querySelectorAll(
+            ".account-section-content"
+        );
+        accountElements.forEach((element) => {
+            element.innerHTML = "";
+        });
+
+        // Reset movie details
+        document.getElementById("movie-title").textContent = "Movie Title";
+        document.getElementById("movie-year").textContent = "Unknown";
+        document.getElementById("movie-runtime").textContent = "Unknown";
+        document.getElementById("movie-quality").textContent = "Unknown";
     }
 }
 
