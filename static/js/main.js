@@ -831,33 +831,65 @@ class MediaLibraryApp {
             return;
         }
 
+        // Basic validation for email format or username
+        const isEmail = shareWithInput.includes("@");
+        if (isEmail && !this.isValidEmail(shareWithInput)) {
+            this.showStatus("Please enter a valid email address");
+            return;
+        }
+
+        if (!isEmail && !this.isValidUsername(shareWithInput)) {
+            this.showStatus(
+                "Please enter a valid username (3-50 characters, letters, numbers, and underscores only)"
+            );
+            return;
+        }
+
         const button = document.getElementById("share-library-btn");
         const originalText = button.textContent;
         button.textContent = "Sharing...";
         button.disabled = true;
 
         try {
-            await this.makeAuthenticatedRequest(
+            const response = await this.makeAuthenticatedRequest(
                 "POST",
                 `/libraries/${this.currentUser.identityId}/share`,
                 {
                     ownerUsername: this.currentUser.username,
-                    shareWithIdentityId: shareWithInput,
+                    sharedWith: shareWithInput, // Changed from shareWithIdentityId
                 }
             );
 
-            this.showStatus("Library shared successfully!");
+            // Show success message with resolved user info
+            const sharedWithInfo = response.sharedWith;
+            const successMessage = isEmail
+                ? `Library shared successfully with ${sharedWithInfo.username} (${shareWithInput})!`
+                : `Library shared successfully with ${sharedWithInfo.username}!`;
+
+            this.showStatus(successMessage);
             document.getElementById("share-with-input").value = "";
             this.loadSharedUsers(); // Refresh the shared users list
         } catch (error) {
             console.error("Error sharing library:", error);
 
             if (error.statusCode === 400) {
-                this.showStatus("Invalid user ID or email provided");
+                // Parse the error message for more specific feedback
+                if (
+                    error.responseText &&
+                    error.responseText.includes("required")
+                ) {
+                    this.showStatus(
+                        "Please provide a username or email address"
+                    );
+                } else {
+                    this.showStatus("Invalid username or email provided");
+                }
             } else if (error.statusCode === 403) {
                 this.showStatus("You can only share your own library");
             } else if (error.statusCode === 404) {
-                this.showStatus("User not found or library doesn't exist");
+                this.showStatus(
+                    "User not found with the provided username or email"
+                );
             } else if (error.statusCode === 401) {
                 this.showStatus("Session expired. Please sign in again.");
                 this.handleLogout();
@@ -871,6 +903,19 @@ class MediaLibraryApp {
             button.textContent = originalText;
             button.disabled = false;
         }
+    }
+
+    // Helper method for email validation
+    isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    // Helper method for username validation
+    isValidUsername(username) {
+        // Assuming usernames are 3-50 characters, alphanumeric plus underscores
+        const usernameRegex = /^[a-zA-Z0-9_]{3,50}$/;
+        return usernameRegex.test(username);
     }
 
     async loadSharedUsers() {
@@ -911,16 +956,74 @@ class MediaLibraryApp {
         container.innerHTML = data.sharedAccesses
             .map(
                 (user) => `
-            <div>
-                <p>Username: ${user.username || "Unknown"}</p>
-                <p>Shared: ${new Date(user.sharedAt).toLocaleDateString()}</p>
+            <div class="shared-user-item">
+                <div class="shared-user-info">
+                    <p><strong>${
+                        user.sharedWithUsername || "Unknown User"
+                    }</strong></p>
+                    <p class="shared-date">Shared: ${new Date(
+                        user.sharedAt
+                    ).toLocaleDateString()}</p>
+                    ${
+                        user.updatedAt && user.updatedAt !== user.sharedAt
+                            ? `<p class="updated-date">Updated: ${new Date(
+                                  user.updatedAt
+                              ).toLocaleDateString()}</p>`
+                            : ""
+                    }
+                </div>
+                <div class="shared-user-actions">
+                    <button 
+                        onclick="window.mediaLibraryApp.removeSharedAccess('${
+                            user.sharedWithIdentityId
+                        }', '${user.sharedWithUsername}')"
+                        class="remove-access-btn">
+                        Remove Access
+                    </button>
+                </div>
                 <hr>
             </div>
         `
             )
             .join("");
-        // <p>Email: ${user.email || "N/A"}</p>
-        // <p>User ID: ${user.sharedWithIdentityId}</p>
+    }
+
+    async removeSharedAccess(sharedWithIdentityId, sharedWithUsername) {
+        if (
+            !confirm(
+                `Are you sure you want to remove access for ${sharedWithUsername}?`
+            )
+        ) {
+            return;
+        }
+
+        try {
+            await this.makeAuthenticatedRequest(
+                "DELETE",
+                `/libraries/${this.currentUser.identityId}/share/${sharedWithIdentityId}`
+            );
+
+            this.showStatus(`Access removed for ${sharedWithUsername}`);
+            this.loadSharedUsers(); // Refresh the shared users list
+        } catch (error) {
+            console.error("Error removing shared access:", error);
+
+            if (error.statusCode === 403) {
+                this.showStatus(
+                    "You can only remove access from your own library"
+                );
+            } else if (error.statusCode === 404) {
+                this.showStatus("Shared access not found");
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error removing access: " +
+                        (error.message || "Unknown error")
+                );
+            }
+        }
     }
 
     async loadMovieMetadata(movie) {
