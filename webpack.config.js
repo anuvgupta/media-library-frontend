@@ -8,39 +8,15 @@ const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
-const { minify } = require("terser");
 
 const LOGS_ENABLED = process.env.STAGE === "dev" || false;
+const IS_DEVELOPMENT = process.env.STAGE === "dev";
 const INIT_SCRIPT_PATH = "./static/js/theme/init.js";
 const ERROR_PAGES_FOLDER = "./static/errors";
 const CSS_STYLES_FOLDER = "./static/css";
 const JS_SCRIPTS_FOLDER = "./static/js";
 const IMG_ASSET_FOLDER = "./static/img";
 const FAVICON_PATH = "static/favicon.ico";
-// const SKETCH_FOLDER = "./static/sketch";
-
-// Helper function to minify inline JS
-async function minifyInlineJs(code) {
-    const result = await minify(code, {
-        compress: {
-            drop_console: !LOGS_ENABLED,
-        },
-    });
-    return result.code;
-}
-
-// Create minified init code synchronously
-const initScript = fs.readFileSync(INIT_SCRIPT_PATH, "utf-8");
-let minifiedInitScript = "";
-(async () => {
-    minifiedInitScript = await minifyInlineJs(initScript);
-})();
-
-// Template helpers
-const templateHelpers = {
-    getInitScript: () =>
-        `<script type="text/javascript">${minifiedInitScript}</script>`,
-};
 
 // Get all error pages
 const errorPages = fs
@@ -57,28 +33,30 @@ const errorHtmlPlugins = errorPages.map(
             template: page.path,
             filename: `errors/${page.name}.html`,
             chunks: [],
-            minify: {
-                removeAttributeQuotes: true,
-                collapseWhitespace: true,
-                removeComments: true,
-                minifyJS: true,
-                minifyCSS: true,
-            },
+            minify: IS_DEVELOPMENT
+                ? false
+                : {
+                      removeAttributeQuotes: true,
+                      collapseWhitespace: true,
+                      removeComments: true,
+                      minifyJS: true,
+                      minifyCSS: true,
+                  },
             inject: true,
         })
 );
 
 module.exports = {
-    mode: "production",
+    mode: IS_DEVELOPMENT ? "development" : "production",
     entry: {
         main: [`${JS_SCRIPTS_FOLDER}/main.js`],
         styles: `${CSS_STYLES_FOLDER}/styles.css`,
-        // sketch_main: [`${JS_SCRIPTS_FOLDER}/sketch/main.js`],
-        // sketch_styles: [`${CSS_STYLES_FOLDER}/sketch/styles.css`],
     },
     output: {
         path: path.resolve(__dirname, "dist"),
-        filename: "js/[name].[contenthash].js",
+        filename: IS_DEVELOPMENT
+            ? "js/[name].js"
+            : "js/[name].[contenthash].js",
         assetModuleFilename: "assets/[hash][ext][query]",
     },
     module: {
@@ -119,72 +97,53 @@ module.exports = {
             },
         ],
     },
-    // optimization: {
-    //     minimize: true, // Keep general minimization enabled
-    //     minimizer: [
-    //         new TerserPlugin({
-    //             terserOptions: {
-    //                 compress: {
-    //                     drop_console: !LOGS_ENABLED,
-    //                 },
-    //             },
-    //             exclude: /js\/generated-sdk/,
-    //         }),
-    //         new CssMinimizerPlugin(),
-    //     ],
-    // },
+    optimization: {
+        minimize: !IS_DEVELOPMENT, // Disable minimization in development
+        minimizer: [
+            new TerserPlugin({
+                terserOptions: {
+                    compress: {
+                        drop_console: !LOGS_ENABLED,
+                    },
+                },
+                exclude: /js\/generated-sdk/,
+            }),
+            new CssMinimizerPlugin(),
+        ],
+    },
     plugins: [
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
             template: "./static/index.html",
             filename: "index.html",
             chunks: ["main", "styles"],
-            templateParameters: templateHelpers, // Use template helpers here
-            // minify: {
-            //     removeAttributeQuotes: true,
-            //     collapseWhitespace: true,
-            //     removeComments: true,
-            //     minifyJS: true,
-            //     minifyCSS: true,
-            // },
+            minify: IS_DEVELOPMENT
+                ? false
+                : {
+                      removeAttributeQuotes: true,
+                      collapseWhitespace: true,
+                      removeComments: true,
+                      minifyJS: true,
+                      minifyCSS: true,
+                  },
             inject: true,
         }),
-        // new HtmlWebpackPlugin({
-        //     template: `${SKETCH_FOLDER}/index.html`,
-        //     filename: "sketch/index.html",
-        //     chunks: ["sketch_main", "sketch_styles"],
-        //     templateParameters: templateHelpers,
-        //     minify: {
-        //         removeAttributeQuotes: true,
-        //         collapseWhitespace: true,
-        //         removeComments: true,
-        //         minifyJS: true,
-        //         minifyCSS: true,
-        //     },
-        //     inject: true,
-        // }),
         ...errorHtmlPlugins,
         new MiniCssExtractPlugin({
-            filename: "css/[name].[contenthash].css",
+            filename: IS_DEVELOPMENT
+                ? "css/[name].css"
+                : "css/[name].[contenthash].css",
         }),
         new CopyWebpackPlugin({
             patterns: [
                 {
-                    from: `${IMG_ASSET_FOLDER}`, // Copy all images
+                    from: `${IMG_ASSET_FOLDER}`,
                     to: "img",
                 },
                 {
-                    from: `${FAVICON_PATH}`, // Copy favicon
+                    from: `${FAVICON_PATH}`,
                     to: "favicon.ico",
                 },
-                // {
-                //     from: `${SKETCH_FOLDER}`,
-                //     to: "sketch",
-                //     globOptions: {
-                //         ignore: ["**/index.html"], // Don't copy index.html as it will be processed by HtmlWebpackPlugin
-                //     },
-                //     noErrorOnMissing: true,
-                // },
             ],
         }),
     ],
@@ -194,4 +153,5 @@ module.exports = {
         port: 8080,
         open: true,
     },
+    devtool: IS_DEVELOPMENT ? "eval-source-map" : "source-map", // Better debugging in dev
 };
