@@ -37,6 +37,16 @@ body {
     color: #666;
 }
 
+div#movie-details-container {
+    display: flex;
+}
+
+div#poster-container {
+    width: 110px;
+    height: auto;
+    margin-right: 20px;
+}
+
 input {
     padding: 4px 5px;
 }

@@ -19,6 +19,9 @@ export const CONFIG = {
     // API Gateway endpoint URL (from CDK output: ApiUrl or custom domain)
     // Optional: Custom API domain (if you set up custom domain for API)
     apiEndpoint: "https://media-api-dev.anuv.me",
+
+    tmdbPosterUrlPrefix1280: "https://image.tmdb.org/t/p/w1280",
+    tmdbPosterUrlPrefix500: "https://image.tmdb.org/t/p/w500",
 };
 
 // Example of how to get these values from your CDK deployment:

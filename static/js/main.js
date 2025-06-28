@@ -1068,6 +1068,7 @@ class MediaLibraryApp {
         // Find the description paragraph in the movie view
         const descriptionParagraph =
             document.getElementById("movie-description");
+        const posterContainer = document.getElementById("poster-container");
 
         if (metadata && metadata.results && metadata.results.length > 0) {
             // Get the first result from the API response
@@ -1079,6 +1080,22 @@ class MediaLibraryApp {
             } else {
                 descriptionParagraph.textContent =
                     "No description available for this movie.";
+            }
+
+            if (movieData.poster_path) {
+                // Clear any existing content in the poster container
+                posterContainer.innerHTML = "";
+
+                // Create the image element
+                const posterImg = document.createElement("img");
+                posterImg.src = `${CONFIG.tmdbPosterUrlPrefix500}${movieData.poster_path}`;
+                posterImg.alt = movieData.title || "Movie Poster";
+                posterImg.style.width = "100%";
+                posterImg.style.height = "auto";
+                posterImg.style.objectFit = "contain";
+
+                // Append the image to the poster container
+                posterContainer.appendChild(posterImg);
             }
         } else {
             // Fallback if no results are available
@@ -1252,6 +1269,7 @@ class MediaLibraryApp {
         document.getElementById("movie-year").textContent = "Unknown";
         document.getElementById("movie-runtime").textContent = "Unknown";
         document.getElementById("movie-quality").textContent = "Unknown";
+        document.getElementById("poster-container").innerHTML = "";
     }
 
     clearAccountContent() {
