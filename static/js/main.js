@@ -1276,46 +1276,27 @@ class MediaLibraryApp {
         this.initializeVideoPlayer(this.currentMovie);
     }
 
-    async getMovieStreamUrl(movie) {
+    async getMoviePlaylist(movie) {
         if (!movie.videoFile) {
             throw new Error("No video file specified for this movie");
         }
 
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
-        const s3Path = `media/${ownerIdentityId}/movies/${movieId}/playlist.m3u8`;
 
         try {
-            // Try S3 first
-            const s3Url = `https://${CONFIG.awsPlaylistBucket}.s3.${CONFIG.region}.amazonaws.com/${s3Path}`;
-            console.log("Trying S3 URL:", s3Url);
+            // Remove the S3 fallback attempt, go straight to API
+            console.log("Fetching playlist from API...");
 
-            const s3Response = await fetch(s3Url, { method: "HEAD" });
-            if (s3Response.ok) {
-                return s3Url;
-            }
-
-            console.log("S3 failed, trying API...");
-
-            // Try API endpoint
             const apiResponse = await this.makeAuthenticatedRequest(
                 "GET",
                 `/libraries/${ownerIdentityId}/movies/${movieId}/playlist`
             );
 
-            // If API returns a URL, use it
-            if (
-                typeof apiResponse === "string" &&
-                apiResponse.startsWith("http")
-            ) {
-                return apiResponse;
-            } else if (apiResponse.playlistUrl) {
-                return apiResponse.playlistUrl;
-            }
-
-            throw new Error("No valid playlist URL returned from API");
+            // Return the playlist text content directly
+            return apiResponse;
         } catch (error) {
-            console.error("Both S3 and API failed:", error);
+            console.error("API playlist fetch failed:", error);
             throw error;
         }
     }
@@ -1324,8 +1305,9 @@ class MediaLibraryApp {
         this.showVideoLoading("Loading video stream...");
 
         try {
-            const streamUrl = await this.getMovieStreamUrlWithRetry(movie);
-            await this.setupHLSPlayer(streamUrl);
+            const playlistText = await this.getMoviePlaylistWithRetry(movie);
+            const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
+            await this.setupHLSPlayer(playlistBlobUrl);
         } catch (error) {
             console.error("Failed to initialize video player:", error);
             this.hideVideoLoading();
@@ -1342,13 +1324,13 @@ class MediaLibraryApp {
         return btoa(this.getMoviePathInLibrary(movie));
     }
 
-    async getMovieStreamUrlWithRetry(movie) {
+    async getMoviePlaylistWithRetry(movie) {
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
         while (this.retryState.phase !== "failed") {
             try {
-                return await this.getMovieStreamUrl(movie);
+                return await this.getMoviePlaylist(movie); // Changed this line
             } catch (error) {
                 console.log(
                     `Attempt ${this.retryState.attempts + 1} failed:`,
@@ -1589,6 +1571,13 @@ class MediaLibraryApp {
 
     delay(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    createPlaylistBlobUrl(playlistText) {
+        const blob = new Blob([playlistText], {
+            type: "application/vnd.apple.mpegurl",
+        });
+        return URL.createObjectURL(blob);
     }
 }
 
