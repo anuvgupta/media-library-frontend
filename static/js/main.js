@@ -1281,7 +1281,7 @@ class MediaLibraryApp {
             throw new Error("No video file specified for this movie");
         }
 
-        const movieId = getMovieId(movie);
+        const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
         const s3Path = `media/${ownerIdentityId}/movies/${movieId}/playlist.m3u8`;
 
@@ -1343,7 +1343,7 @@ class MediaLibraryApp {
     }
 
     async getMovieStreamUrlWithRetry(movie) {
-        const movieId = getMovieId(movie);
+        const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
         while (this.retryState.phase !== "failed") {
