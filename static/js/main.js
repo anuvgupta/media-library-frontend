@@ -1276,7 +1276,7 @@ class MediaLibraryApp {
         this.initializeVideoPlayer(this.currentMovie);
     }
 
-    async getMoviePlaylist(movie) {
+    async getMovieStreamUrl(movie) {
         if (!movie.videoFile) {
             throw new Error("No video file specified for this movie");
         }
@@ -1285,18 +1285,15 @@ class MediaLibraryApp {
         const ownerIdentityId = this.currentLibraryOwner;
 
         try {
-            // Remove the S3 fallback attempt, go straight to API
-            console.log("Fetching playlist from API...");
-
             const apiResponse = await this.makeAuthenticatedRequest(
                 "GET",
                 `/libraries/${ownerIdentityId}/movies/${movieId}/playlist`
             );
 
-            // Return the playlist text content directly
-            return apiResponse;
+            // Extract the pre-signed URL from the response
+            return apiResponse.playlistUrl;
         } catch (error) {
-            console.error("API playlist fetch failed:", error);
+            console.error("Failed to get playlist URL:", error);
             throw error;
         }
     }
@@ -1305,9 +1302,9 @@ class MediaLibraryApp {
         this.showVideoLoading("Loading video stream...");
 
         try {
-            const playlistText = await this.getMoviePlaylistWithRetry(movie);
-            const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
-            await this.setupHLSPlayer(playlistBlobUrl);
+            const playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
+            // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
+            await this.setupHLSPlayer(playlistUrl);
         } catch (error) {
             console.error("Failed to initialize video player:", error);
             this.hideVideoLoading();
@@ -1324,13 +1321,13 @@ class MediaLibraryApp {
         return btoa(this.getMoviePathInLibrary(movie));
     }
 
-    async getMoviePlaylistWithRetry(movie) {
+    async getMovieStreamUrlWithRetry(movie) {
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
         while (this.retryState.phase !== "failed") {
             try {
-                return await this.getMoviePlaylist(movie); // Changed this line
+                return await this.getMovieStreamUrl(movie);
             } catch (error) {
                 console.log(
                     `Attempt ${this.retryState.attempts + 1} failed:`,
