@@ -1449,30 +1449,25 @@ class MediaLibraryApp {
     }
 
     updateQualitySelector(levels) {
-        const qualitySelect = document.getElementById("quality-select");
-        const qualitySelector = document.getElementById("quality-selector");
-
-        if (!qualitySelect || !qualitySelector) return;
-
-        qualitySelect.innerHTML = '<option value="-1">Auto Quality</option>';
-
-        levels.forEach((level, index) => {
-            const option = document.createElement("option");
-            option.value = index;
-            option.textContent = `${level.height}p (${Math.round(
-                level.bitrate / 1000
-            )}kbps)`;
-            qualitySelect.appendChild(option);
-        });
-
-        qualitySelector.style.display = "block";
-
-        // Add quality change handler
-        qualitySelect.onchange = (e) => {
-            if (this.hls) {
-                this.hls.currentLevel = parseInt(e.target.value);
-            }
-        };
+        // const qualitySelect = document.getElementById("quality-select");
+        // const qualitySelector = document.getElementById("quality-selector");
+        // if (!qualitySelect || !qualitySelector) return;
+        // qualitySelect.innerHTML = '<option value="-1">Auto Quality</option>';
+        // levels.forEach((level, index) => {
+        //     const option = document.createElement("option");
+        //     option.value = index;
+        //     option.textContent = `${level.height}p (${Math.round(
+        //         level.bitrate / 1000
+        //     )}kbps)`;
+        //     qualitySelect.appendChild(option);
+        // });
+        // qualitySelector.style.display = "block";
+        // // Add quality change handler
+        // qualitySelect.onchange = (e) => {
+        //     if (this.hls) {
+        //         this.hls.currentLevel = parseInt(e.target.value);
+        //     }
+        // };
     }
 
     getErrorMessage(error) {
