@@ -1339,7 +1339,7 @@ class MediaLibraryApp {
     }
 
     getMovieId(movie) {
-        return btoa(getMoviePathInLibrary(movie));
+        return btoa(this.getMoviePathInLibrary(movie));
     }
 
     async getMovieStreamUrlWithRetry(movie) {
