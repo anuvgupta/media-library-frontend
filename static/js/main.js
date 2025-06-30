@@ -804,9 +804,12 @@ class MediaLibraryApp {
 
         // Flatten all movies from all groups into a single array
         const allMovies = [];
-        Object.keys(this.currentLibraryData).forEach((groupName) => {
-            this.currentLibraryData[groupName].forEach((movie) => {
-                allMovies.push(movie);
+        Object.keys(this.currentLibraryData).forEach((collection) => {
+            this.currentLibraryData[collection].forEach((movie) => {
+                allMovies.push({
+                    ...movie,
+                    collection,
+                });
             });
         });
 
@@ -1278,7 +1281,7 @@ class MediaLibraryApp {
             throw new Error("No video file specified for this movie");
         }
 
-        const movieId = movie.videoFile;
+        const movieId = getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
         const s3Path = `media/${ownerIdentityId}/movies/${movieId}/playlist.m3u8`;
 
@@ -1331,8 +1334,16 @@ class MediaLibraryApp {
         }
     }
 
+    getMoviePathInLibrary(movie) {
+        return `${movie.collection}/${movie.name} (${movie.year})/${movie.videoFile}`;
+    }
+
+    getMovieId(movie) {
+        return btoa(getMoviePathInLibrary(movie));
+    }
+
     async getMovieStreamUrlWithRetry(movie) {
-        const movieId = movie.videoFile;
+        const movieId = getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
         while (this.retryState.phase !== "failed") {
