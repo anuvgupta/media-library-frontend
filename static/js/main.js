@@ -1400,6 +1400,9 @@ class MediaLibraryApp {
         const video = document.getElementById("video-player");
         if (!video) throw new Error("Video element not found");
 
+        // Reset video to beginning
+        video.currentTime = 0;
+
         if (Hls.isSupported()) {
             this.hls = new Hls({
                 debug: false,
@@ -1414,6 +1417,14 @@ class MediaLibraryApp {
             this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                 this.hideVideoLoading();
                 this.updateQualitySelector(data.levels);
+
+                // Start playing automatically from the beginning
+                video.currentTime = 0;
+                video.play().catch((error) => {
+                    console.warn("Autoplay failed:", error);
+                    // Autoplay might be blocked by browser policy
+                    // The user will need to click play manually
+                });
             });
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
@@ -1429,7 +1440,13 @@ class MediaLibraryApp {
             this.hls.attachMedia(video);
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
             video.src = streamUrl;
+            video.currentTime = 0;
             this.hideVideoLoading();
+
+            // For native HLS support (Safari), start playing automatically
+            video.play().catch((error) => {
+                console.warn("Autoplay failed:", error);
+            });
         } else {
             throw new Error("Video streaming not supported in this browser");
         }
