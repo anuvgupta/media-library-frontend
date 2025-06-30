@@ -3,6 +3,8 @@ import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { Sha256 } from "@aws-crypto/sha256-js";
+import Hls from "hls.js";
+
 import { CONFIG } from "./config/config.js";
 
 class MediaLibraryApp {
@@ -15,6 +17,13 @@ class MediaLibraryApp {
         this.currentLibraryData = null;
         this.libraries = [];
         this.currentMovie = null;
+        this.videoPlayer = null;
+        this.hls = null;
+        this.retryState = {
+            attempts: 0,
+            phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
+            isRetrying: false,
+        };
         this.initializeEventListeners();
         this.showLoadingView();
         this.checkExistingSession();
@@ -174,7 +183,8 @@ class MediaLibraryApp {
         // Load movie metadata
         this.loadMovieMetadata(movie);
 
-        // Movie content will be loaded here later
+        // Show play button instead of auto-loading video
+        this.showPlayButton();
     }
 
     hideAllViews() {
@@ -1225,6 +1235,256 @@ class MediaLibraryApp {
         return await response.json();
     }
 
+    showPlayButton() {
+        const playButtonOverlay = document.getElementById(
+            "play-button-overlay"
+        );
+        const loadingOverlay = document.getElementById("loading-overlay");
+
+        if (playButtonOverlay) {
+            playButtonOverlay.classList.remove("hidden");
+            playButtonOverlay.onclick = () => this.onPlayButtonClick();
+        }
+
+        if (loadingOverlay) {
+            loadingOverlay.classList.add("hidden");
+        }
+
+        // Reset retry state
+        this.retryState = {
+            attempts: 0,
+            phase: "initial",
+            isRetrying: false,
+        };
+    }
+
+    hidePlayButton() {
+        const playButtonOverlay = document.getElementById(
+            "play-button-overlay"
+        );
+        if (playButtonOverlay) {
+            playButtonOverlay.classList.add("hidden");
+            playButtonOverlay.onclick = null;
+        }
+    }
+
+    onPlayButtonClick() {
+        this.hidePlayButton();
+        this.initializeVideoPlayer(this.currentMovie);
+    }
+
+    async getMovieStreamUrl(movie) {
+        if (!movie.videoFile) {
+            throw new Error("No video file specified for this movie");
+        }
+
+        const movieId = movie.videoFile;
+        const ownerIdentityId = this.currentLibraryOwner;
+        const s3Path = `media/${ownerIdentityId}/movies/${movieId}/playlist.m3u8`;
+
+        try {
+            // Try S3 first
+            const s3Url = `https://${CONFIG.awsPlaylistBucket}.s3.${CONFIG.region}.amazonaws.com/${s3Path}`;
+            console.log("Trying S3 URL:", s3Url);
+
+            const s3Response = await fetch(s3Url, { method: "HEAD" });
+            if (s3Response.ok) {
+                return s3Url;
+            }
+
+            console.log("S3 failed, trying API...");
+
+            // Try API endpoint
+            const apiResponse = await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${ownerIdentityId}/movies/${movieId}/playlist`
+            );
+
+            // If API returns a URL, use it
+            if (
+                typeof apiResponse === "string" &&
+                apiResponse.startsWith("http")
+            ) {
+                return apiResponse;
+            } else if (apiResponse.playlistUrl) {
+                return apiResponse.playlistUrl;
+            }
+
+            throw new Error("No valid playlist URL returned from API");
+        } catch (error) {
+            console.error("Both S3 and API failed:", error);
+            throw error;
+        }
+    }
+
+    async initializeVideoPlayer(movie) {
+        this.showVideoLoading("Loading video stream...");
+
+        try {
+            const streamUrl = await this.getMovieStreamUrlWithRetry(movie);
+            await this.setupHLSPlayer(streamUrl);
+        } catch (error) {
+            console.error("Failed to initialize video player:", error);
+            this.hideVideoLoading();
+            this.showPlayButton();
+            this.showStatus("Error loading video: " + error.message);
+        }
+    }
+
+    async getMovieStreamUrlWithRetry(movie) {
+        const movieId = movie.videoFile;
+        const ownerIdentityId = this.currentLibraryOwner;
+
+        while (this.retryState.phase !== "failed") {
+            try {
+                return await this.getMovieStreamUrl(movie);
+            } catch (error) {
+                console.log(
+                    `Attempt ${this.retryState.attempts + 1} failed:`,
+                    error.message
+                );
+
+                // Request processing if this is the first failure
+                if (
+                    this.retryState.attempts === 0 &&
+                    !this.retryState.isRetrying
+                ) {
+                    this.retryState.isRetrying = true;
+                    this.showVideoLoading("Preparing video stream...");
+
+                    try {
+                        await this.makeAuthenticatedRequest(
+                            "POST",
+                            `/libraries/${ownerIdentityId}/movies/${movieId}/request`
+                        );
+                        console.log("Processing request sent");
+                    } catch (requestError) {
+                        console.warn(
+                            "Failed to send processing request:",
+                            requestError
+                        );
+                    }
+
+                    // Wait 5 seconds after request
+                    await this.delay(5000);
+                }
+
+                this.retryState.attempts++;
+
+                // Determine next action based on current state
+                if (
+                    this.retryState.phase === "initial" &&
+                    this.retryState.attempts >= 5
+                ) {
+                    this.retryState.phase = "first_retry_cycle";
+                    this.retryState.attempts = 0;
+                    this.showVideoLoading("Still preparing... please wait");
+                    await this.delay(60000); // Wait 1 minute
+                } else if (
+                    this.retryState.phase === "first_retry_cycle" &&
+                    this.retryState.attempts >= 5
+                ) {
+                    this.retryState.phase = "failed";
+                    throw new Error(
+                        "Video processing timed out. Please try again later."
+                    );
+                } else {
+                    // Wait 10 seconds between retries
+                    const waitTime =
+                        this.retryState.phase === "initial" ? 10000 : 10000;
+                    await this.delay(waitTime);
+                }
+            }
+        }
+
+        throw new Error("Maximum retry attempts exceeded");
+    }
+
+    async setupHLSPlayer(streamUrl) {
+        // Destroy existing player if any
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
+
+        const video = document.getElementById("video-player");
+        if (!video) throw new Error("Video element not found");
+
+        if (Hls.isSupported()) {
+            this.hls = new Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 90,
+                maxBufferLength: 60,
+                startLevel: -1,
+                capLevelToPlayerSize: true,
+            });
+
+            this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                this.hideVideoLoading();
+                this.updateQualitySelector(data.levels);
+            });
+
+            this.hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error("HLS error:", data);
+                if (data.fatal) {
+                    this.hideVideoLoading();
+                    this.showPlayButton();
+                    this.showStatus("Error playing video stream");
+                }
+            });
+
+            this.hls.loadSource(streamUrl);
+            this.hls.attachMedia(video);
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = streamUrl;
+            this.hideVideoLoading();
+        } else {
+            throw new Error("Video streaming not supported in this browser");
+        }
+    }
+
+    showVideoLoading(text = "Loading video...") {
+        const loadingOverlay = document.getElementById("loading-overlay");
+        const loadingText = document.getElementById("loading-text");
+
+        if (loadingText) loadingText.textContent = text;
+        if (loadingOverlay) loadingOverlay.classList.remove("hidden");
+    }
+
+    hideVideoLoading() {
+        const loadingOverlay = document.getElementById("loading-overlay");
+        if (loadingOverlay) loadingOverlay.classList.add("hidden");
+    }
+
+    updateQualitySelector(levels) {
+        const qualitySelect = document.getElementById("quality-select");
+        const qualitySelector = document.getElementById("quality-selector");
+
+        if (!qualitySelect || !qualitySelector) return;
+
+        qualitySelect.innerHTML = '<option value="-1">Auto Quality</option>';
+
+        levels.forEach((level, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = `${level.height}p (${Math.round(
+                level.bitrate / 1000
+            )}kbps)`;
+            qualitySelect.appendChild(option);
+        });
+
+        qualitySelector.style.display = "block";
+
+        // Add quality change handler
+        qualitySelect.onchange = (e) => {
+            if (this.hls) {
+                this.hls.currentLevel = parseInt(e.target.value);
+            }
+        };
+    }
+
     getErrorMessage(error) {
         const errorMessage = error.message || error.toString();
 
@@ -1271,6 +1531,31 @@ class MediaLibraryApp {
         document.getElementById("movie-runtime").textContent = "Unknown";
         document.getElementById("movie-quality").textContent = "Unknown";
         document.getElementById("poster-container").innerHTML = "";
+
+        // Clear video player
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
+
+        const video = document.getElementById("video-player");
+        if (video) {
+            video.src = "";
+            video.load();
+        }
+
+        this.hideVideoLoading();
+        this.hidePlayButton();
+
+        const qualitySelector = document.getElementById("quality-selector");
+        if (qualitySelector) qualitySelector.style.display = "none";
+
+        // Reset retry state
+        this.retryState = {
+            attempts: 0,
+            phase: "initial",
+            isRetrying: false,
+        };
     }
 
     clearAccountContent() {
@@ -1289,6 +1574,10 @@ class MediaLibraryApp {
         clearLibraryPageContent();
         clearMoviePageContent();
         clearAccountContent();
+    }
+
+    delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 }
 

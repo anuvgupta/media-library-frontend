@@ -22,6 +22,9 @@ export const CONFIG = {
 
     tmdbPosterUrlPrefix1280: "https://image.tmdb.org/t/p/w1280",
     tmdbPosterUrlPrefix500: "https://image.tmdb.org/t/p/w500",
+
+    awsMediaBucket: "media-library-media-738123590383-dev",
+    awsPlaylistBucket: "media-library-playlist-738123590383-dev",
 };
 
 // Example of how to get these values from your CDK deployment:

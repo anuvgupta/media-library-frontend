@@ -81,6 +81,39 @@ button.remove-access-btn:hover {
     background-color: #c82333;
 }
 
+.player-container {
+    position: relative;
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.play-button-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.play-button:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 1);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 /* Media query for mobile screens */
 @media screen and (max-width: 768px) {
     body {
