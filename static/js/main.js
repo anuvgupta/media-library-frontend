@@ -1535,9 +1535,9 @@ class MediaLibraryApp {
 
         const maxAttempts = 20;
         let attempts = 0;
-
-        const pollInterval = setInterval(async () => {
-            setTimeout(async () => {
+        let pollInterval = null;
+        setTimeout(async () => {
+            pollInterval = setInterval(async () => {
                 attempts++;
                 console.log(
                     `Recovery polling attempt ${attempts}/${maxAttempts}`
