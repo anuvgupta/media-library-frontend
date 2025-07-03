@@ -1366,7 +1366,7 @@ class MediaLibraryApp {
                     this.retryState.phase = "first_retry_cycle";
                     this.retryState.attempts = 0;
                     this.showVideoLoading("Still preparing... please wait");
-                    await this.delay(60000); // Wait 1 minute
+                    await this.delay(30000); // Wait 0.5 minute
                 } else if (
                     this.retryState.phase === "first_retry_cycle" &&
                     this.retryState.attempts >= 5
