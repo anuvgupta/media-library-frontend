@@ -1425,7 +1425,11 @@ class MediaLibraryApp {
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 console.error("HLS error:", data);
-                if (data.fatal) {
+                if (
+                    data.fatal ||
+                    (data.type === "mediaError" &&
+                        data.details === "bufferStalledError")
+                ) {
                     // this.hideVideoLoading();
                     // this.showPlayButton();
                     // this.showStatus(
