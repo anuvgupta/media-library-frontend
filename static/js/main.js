@@ -1497,7 +1497,9 @@ class MediaLibraryApp {
 
         // Store current playback position before requesting re-processing
         const video = document.getElementById("video-player");
-        this.recoveryPosition = video ? video.currentTime : 0;
+        this.recoveryPosition = (video ? video.currentTime : 0) - 5;
+        this.recoveryPosition =
+            this.recoveryPosition < 0 ? 0 : this.recoveryPosition;
         console.log("Storing recovery position:", this.recoveryPosition);
 
         try {
@@ -1569,7 +1571,7 @@ class MediaLibraryApp {
                     "Stream recovery failed. Please try playing again."
                 );
             }
-        }, 16000);
+        }, CONFIG.streamRecoveryRetryInterval);
     }
 
     resetRetryState() {
