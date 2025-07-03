@@ -1569,7 +1569,7 @@ class MediaLibraryApp {
                     "Stream recovery failed. Please try playing again."
                 );
             }
-        }, 10000);
+        }, 12500);
     }
 
     resetRetryState() {
