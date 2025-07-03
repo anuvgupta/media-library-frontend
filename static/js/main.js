@@ -1427,11 +1427,13 @@ class MediaLibraryApp {
                 this.resetRetryState();
 
                 if (isRecovery) {
-                    // For recovery, restore position and continue playing
-                    video.currentTime = currentTime;
-                    video.play().catch((error) => {
-                        console.warn("Recovery autoplay failed:", error);
-                    });
+                    // Wait a moment for HLS to initialize, then for recovery, restore position and continue playing
+                    setTimeout(() => {
+                        video.currentTime = currentTime;
+                        video.play().catch((error) => {
+                            console.warn("Recovery autoplay failed:", error);
+                        });
+                    }, 100);
                 } else {
                     // Wait a moment for HLS to initialize, then force start position and play from beginning
                     setTimeout(() => {
