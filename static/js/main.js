@@ -19,6 +19,7 @@ class MediaLibraryApp {
         this.currentMovie = null;
         this.videoPlayer = null;
         this.hls = null;
+        this.playlistUrl = null;
         this.retryState = {
             attempts: 0,
             phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
@@ -1298,9 +1299,9 @@ class MediaLibraryApp {
         this.showVideoLoading("Loading video stream...");
 
         try {
-            const playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
+            this.playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
             // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
-            await this.setupHLSPlayer(playlistUrl);
+            await this.setupHLSPlayer(this.playlistUrl);
         } catch (error) {
             console.error("Failed to initialize video player:", error);
             this.hideVideoLoading();
@@ -1495,7 +1496,7 @@ class MediaLibraryApp {
         console.log("Starting stream recovery polling...");
         this.showVideoLoading("Re-processing video stream...");
 
-        const maxAttempts = 20; // 20 attempts over ~3.3 minutes
+        const maxAttempts = 20;
         let attempts = 0;
 
         const pollInterval = setInterval(async () => {
@@ -1503,39 +1504,37 @@ class MediaLibraryApp {
             console.log(`Recovery polling attempt ${attempts}/${maxAttempts}`);
 
             try {
-                // Try to get a fresh playlist URL
-                const newPlaylistUrl = await this.getMovieStreamUrl(
-                    this.currentMovie
-                );
+                // Reload the HLS player with the same playlist URL
+                await this.setupHLSPlayer(this.playlistUrl);
 
-                // If we get here, the playlist is available again
-                console.log("Stream recovery successful, reloading player");
-                clearInterval(pollInterval);
+                // Check if the HLS player successfully loaded
+                if (this.hls && this.hls.media) {
+                    console.log("Stream recovery successful, player reloaded");
+                    clearInterval(pollInterval);
+                    this.retryState.isRetrying = false;
+                    this.showStatus("Video stream recovered successfully!");
+                    return;
+                }
 
-                // Reload the HLS player with the new playlist
-                await this.setupHLSPlayer(newPlaylistUrl);
-
-                // Reset retry state
-                this.retryState.isRetrying = false;
-                this.showStatus("Video stream recovered successfully!");
+                // If we get here without the media attached, it might still be loading
+                // Let it continue to the next attempt
             } catch (error) {
                 console.log(
                     `Recovery attempt ${attempts} failed:`,
                     error.message
                 );
-
-                if (attempts >= maxAttempts) {
-                    clearInterval(pollInterval);
-                    this.retryState.isRetrying = false;
-                    this.hideVideoLoading();
-                    this.showPlayButton();
-                    this.showStatus(
-                        "Stream recovery failed. Please try playing again."
-                    );
-                }
-                // Continue polling if under max attempts
             }
-        }, 10000); // Poll every 10 seconds
+
+            if (attempts >= maxAttempts) {
+                clearInterval(pollInterval);
+                this.retryState.isRetrying = false;
+                this.hideVideoLoading();
+                this.showPlayButton();
+                this.showStatus(
+                    "Stream recovery failed. Please try playing again."
+                );
+            }
+        }, 10000);
     }
 
     resetRetryState() {
@@ -1647,11 +1646,8 @@ class MediaLibraryApp {
         if (qualitySelector) qualitySelector.style.display = "none";
 
         // Reset retry state
-        this.retryState = {
-            attempts: 0,
-            phase: "initial",
-            isRetrying: false,
-        };
+        this.resetRetryState();
+        this.playlistUrl = null;
     }
 
     clearAccountContent() {
