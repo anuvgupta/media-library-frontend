@@ -1393,7 +1393,7 @@ class MediaLibraryApp {
         throw new Error("Maximum retry attempts exceeded");
     }
 
-    async setupHLSPlayer(streamUrl) {
+    async setupHLSPlayer(streamUrl, isRecovery = false) {
         // Destroy existing player if any
         if (this.hls) {
             this.hls.destroy();
@@ -1403,8 +1403,8 @@ class MediaLibraryApp {
         const video = document.getElementById("video-player");
         if (!video) throw new Error("Video element not found");
 
-        // Reset video to beginning
-        video.currentTime = 0;
+        // Store current position for recovery
+        const currentTime = isRecovery ? video.currentTime : 0;
 
         if (Hls.isSupported()) {
             this.hls = new Hls({
@@ -1416,20 +1416,31 @@ class MediaLibraryApp {
                 capLevelToPlayerSize: true,
                 // VOD-specific settings:
                 lowLatencyMode: false,
-                startPosition: 0, // Force start at beginning
+                startPosition: isRecovery ? currentTime : 0,
             });
 
             this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                 this.hideVideoLoading();
                 this.updateQualitySelector(data.levels);
 
-                // Wait a moment for HLS to initialize, then force start position and play from beginning
-                setTimeout(() => {
-                    video.currentTime = 0;
+                // Reset retry state after successful manifest parsing
+                this.resetRetryState();
+
+                if (isRecovery) {
+                    // For recovery, restore position and continue playing
+                    video.currentTime = currentTime;
                     video.play().catch((error) => {
-                        console.warn("Autoplay failed:", error);
+                        console.warn("Recovery autoplay failed:", error);
                     });
-                }, 100);
+                } else {
+                    // Wait a moment for HLS to initialize, then force start position and play from beginning
+                    setTimeout(() => {
+                        video.currentTime = 0;
+                        video.play().catch((error) => {
+                            console.warn("Autoplay failed:", error);
+                        });
+                    }, 100);
+                }
             });
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
@@ -1452,8 +1463,19 @@ class MediaLibraryApp {
             this.hls.attachMedia(video);
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
             video.src = streamUrl;
-            video.currentTime = 0;
-            this.hideVideoLoading();
+
+            if (!isRecovery) {
+                video.addEventListener(
+                    "loadedmetadata",
+                    () => {
+                        video.currentTime = 0;
+                        this.hideVideoLoading();
+                    },
+                    { once: true }
+                );
+            } else {
+                this.hideVideoLoading();
+            }
 
             // For native HLS support (Safari), start playing automatically
             video.play().catch((error) => {
