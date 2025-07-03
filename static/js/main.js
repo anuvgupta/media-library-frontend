@@ -1537,40 +1537,46 @@ class MediaLibraryApp {
         let attempts = 0;
 
         const pollInterval = setInterval(async () => {
-            attempts++;
-            console.log(`Recovery polling attempt ${attempts}/${maxAttempts}`);
+            setTimeout(async () => {
+                attempts++;
+                console.log(
+                    `Recovery polling attempt ${attempts}/${maxAttempts}`
+                );
 
-            try {
-                // Reload the HLS player with the same playlist URL
-                await this.setupHLSPlayer(this.playlistUrl, true);
+                try {
+                    // Reload the HLS player with the same playlist URL
+                    await this.setupHLSPlayer(this.playlistUrl, true);
 
-                // Check if the HLS player successfully loaded
-                if (this.hls && this.hls.media) {
-                    console.log("Stream recovery successful, player reloaded");
-                    clearInterval(pollInterval);
-                    this.retryState.isRetrying = false;
-                    this.showStatus("Video stream recovered successfully!");
-                    return;
+                    // Check if the HLS player successfully loaded
+                    if (this.hls && this.hls.media) {
+                        console.log(
+                            "Stream recovery successful, player reloaded"
+                        );
+                        clearInterval(pollInterval);
+                        this.retryState.isRetrying = false;
+                        this.showStatus("Video stream recovered successfully!");
+                        return;
+                    }
+
+                    // If we get here without the media attached, it might still be loading
+                    // Let it continue to the next attempt
+                } catch (error) {
+                    console.log(
+                        `Recovery attempt ${attempts} failed:`,
+                        error.message
+                    );
                 }
 
-                // If we get here without the media attached, it might still be loading
-                // Let it continue to the next attempt
-            } catch (error) {
-                console.log(
-                    `Recovery attempt ${attempts} failed:`,
-                    error.message
-                );
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(pollInterval);
-                this.retryState.isRetrying = false;
-                this.hideVideoLoading();
-                this.showPlayButton();
-                this.showStatus(
-                    "Stream recovery failed. Please try playing again."
-                );
-            }
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    this.retryState.isRetrying = false;
+                    this.hideVideoLoading();
+                    this.showPlayButton();
+                    this.showStatus(
+                        "Stream recovery failed. Please try playing again."
+                    );
+                }
+            }, CONFIG.streamRecoveryRetryInterval);
         }, CONFIG.streamRecoveryRetryInterval);
     }
 
