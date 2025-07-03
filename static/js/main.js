@@ -1404,7 +1404,9 @@ class MediaLibraryApp {
         if (!video) throw new Error("Video element not found");
 
         // Store current position for recovery
+        console.log("video.currentTime=", video.currentTime);
         const currentTime = isRecovery ? video.currentTime : 0;
+        console.log("currentTime=", currentTime);
 
         if (Hls.isSupported()) {
             this.hls = new Hls({
