@@ -1254,11 +1254,7 @@ class MediaLibraryApp {
         }
 
         // Reset retry state
-        this.retryState = {
-            attempts: 0,
-            phase: "initial",
-            isRetrying: false,
-        };
+        this.resetRetryState();
     }
 
     hidePlayButton() {
@@ -1430,9 +1426,12 @@ class MediaLibraryApp {
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 console.error("HLS error:", data);
                 if (data.fatal) {
-                    this.hideVideoLoading();
-                    this.showPlayButton();
-                    this.showStatus("Error playing video stream");
+                    // this.hideVideoLoading();
+                    // this.showPlayButton();
+                    // this.showStatus(
+                    //     "Error playing video stream, re-requesting movie"
+                    // );
+                    this.handleStreamError(data);
                 }
             });
 
@@ -1450,6 +1449,52 @@ class MediaLibraryApp {
         } else {
             throw new Error("Video streaming not supported in this browser");
         }
+    }
+
+    async handleStreamError(errorData) {
+        // Prevent multiple simultaneous requests
+        if (this.retryState.isRetrying) {
+            console.log("Already retrying, ignoring additional error");
+            return;
+        }
+
+        this.retryState.isRetrying = true;
+
+        try {
+            const movieId = this.getMovieId(this.currentMovie);
+            const ownerIdentityId = this.currentLibraryOwner;
+
+            console.log(
+                "Requesting movie re-processing due to stream error:",
+                errorData.details
+            );
+
+            await this.makeAuthenticatedRequest(
+                "POST",
+                `/libraries/${ownerIdentityId}/movies/${movieId}/request`
+            );
+
+            this.showStatus("Stream error detected. Re-processing video...");
+
+            // Wait a bit before allowing new requests
+            setTimeout(() => {
+                this.retryState.isRetrying = false;
+            }, 30000); // 30 second cooldown
+        } catch (requestError) {
+            console.error("Failed to request re-processing:", requestError);
+            this.retryState.isRetrying = false;
+            this.showStatus(
+                "Stream error occurred. Please try refreshing the page."
+            );
+        }
+    }
+
+    resetRetryState() {
+        this.retryState = {
+            attempts: 0,
+            phase: "initial",
+            isRetrying: false,
+        };
     }
 
     showVideoLoading(text = "Loading video...") {
