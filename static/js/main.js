@@ -1409,19 +1409,24 @@ class MediaLibraryApp {
                 maxBufferLength: 60,
                 startLevel: -1,
                 capLevelToPlayerSize: true,
+                // VOD-specific settings:
+                liveMaxLatencyDuration: 0,
+                liveSyncDuration: 0,
+                liveMaxLatencyDurationCount: 0,
+                startPosition: 0, // Force start at beginning
             });
 
             this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                 this.hideVideoLoading();
                 this.updateQualitySelector(data.levels);
 
-                // Start playing automatically from the beginning
-                video.currentTime = 0;
-                video.play().catch((error) => {
-                    console.warn("Autoplay failed:", error);
-                    // Autoplay might be blocked by browser policy
-                    // The user will need to click play manually
-                });
+                // Wait a moment for HLS to initialize, then force start position and play from beginning
+                setTimeout(() => {
+                    video.currentTime = 0;
+                    video.play().catch((error) => {
+                        console.warn("Autoplay failed:", error);
+                    });
+                }, 100);
             });
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
