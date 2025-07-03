@@ -1404,15 +1404,12 @@ class MediaLibraryApp {
             this.hls = new Hls({
                 debug: false,
                 enableWorker: true,
-                lowLatencyMode: true,
                 backBufferLength: 90,
                 maxBufferLength: 60,
                 startLevel: -1,
                 capLevelToPlayerSize: true,
                 // VOD-specific settings:
-                liveMaxLatencyDuration: 0,
-                liveSyncDuration: 0,
-                liveMaxLatencyDurationCount: 0,
+                lowLatencyMode: false,
                 startPosition: 0, // Force start at beginning
             });
 
