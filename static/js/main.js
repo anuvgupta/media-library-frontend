@@ -1301,7 +1301,7 @@ class MediaLibraryApp {
         try {
             this.playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
             // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
-            await this.setupHLSPlayer(this.playlistUrl);
+            await this.setupHLSPlayer(this.playlistUrl, false);
         } catch (error) {
             console.error("Failed to initialize video player:", error);
             this.hideVideoLoading();
@@ -1535,7 +1535,7 @@ class MediaLibraryApp {
 
             try {
                 // Reload the HLS player with the same playlist URL
-                await this.setupHLSPlayer(this.playlistUrl);
+                await this.setupHLSPlayer(this.playlistUrl, true);
 
                 // Check if the HLS player successfully loaded
                 if (this.hls && this.hls.media) {
