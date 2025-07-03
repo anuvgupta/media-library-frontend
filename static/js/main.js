@@ -1480,10 +1480,8 @@ class MediaLibraryApp {
 
             this.showStatus("Stream error detected. Re-processing video...");
 
-            // Wait a bit before allowing new requests
-            setTimeout(() => {
-                this.retryState.isRetrying = false;
-            }, 30000); // 30 second cooldown
+            // Start polling for the new playlist
+            this.startStreamRecoveryPolling();
         } catch (requestError) {
             console.error("Failed to request re-processing:", requestError);
             this.retryState.isRetrying = false;
@@ -1491,6 +1489,53 @@ class MediaLibraryApp {
                 "Stream error occurred. Please try refreshing the page."
             );
         }
+    }
+
+    async startStreamRecoveryPolling() {
+        console.log("Starting stream recovery polling...");
+        this.showVideoLoading("Re-processing video stream...");
+
+        const maxAttempts = 20; // 20 attempts over ~3.3 minutes
+        let attempts = 0;
+
+        const pollInterval = setInterval(async () => {
+            attempts++;
+            console.log(`Recovery polling attempt ${attempts}/${maxAttempts}`);
+
+            try {
+                // Try to get a fresh playlist URL
+                const newPlaylistUrl = await this.getMovieStreamUrl(
+                    this.currentMovie
+                );
+
+                // If we get here, the playlist is available again
+                console.log("Stream recovery successful, reloading player");
+                clearInterval(pollInterval);
+
+                // Reload the HLS player with the new playlist
+                await this.setupHLSPlayer(newPlaylistUrl);
+
+                // Reset retry state
+                this.retryState.isRetrying = false;
+                this.showStatus("Video stream recovered successfully!");
+            } catch (error) {
+                console.log(
+                    `Recovery attempt ${attempts} failed:`,
+                    error.message
+                );
+
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    this.retryState.isRetrying = false;
+                    this.hideVideoLoading();
+                    this.showPlayButton();
+                    this.showStatus(
+                        "Stream recovery failed. Please try playing again."
+                    );
+                }
+                // Continue polling if under max attempts
+            }
+        }, 10000); // Poll every 10 seconds
     }
 
     resetRetryState() {
