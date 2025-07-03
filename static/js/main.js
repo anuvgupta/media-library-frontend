@@ -1319,12 +1319,18 @@ class MediaLibraryApp {
     }
 
     async getMovieStreamUrlWithRetry(movie) {
+        this.resetRetryState();
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
         while (this.retryState.phase !== "failed") {
             try {
-                return await this.getMovieStreamUrl(movie);
+                const result = await this.getMovieStreamUrl(movie);
+
+                // Reset retry state after successful stream URL retrieval
+                this.resetRetryState();
+
+                return result;
             } catch (error) {
                 console.log(
                     `Attempt ${this.retryState.attempts + 1} failed:`,
