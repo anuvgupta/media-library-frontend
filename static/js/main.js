@@ -20,6 +20,7 @@ class MediaLibraryApp {
         this.videoPlayer = null;
         this.hls = null;
         this.playlistUrl = null;
+        this.recoveryPosition = 0;
         this.retryState = {
             attempts: 0,
             phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
@@ -1403,11 +1404,6 @@ class MediaLibraryApp {
         const video = document.getElementById("video-player");
         if (!video) throw new Error("Video element not found");
 
-        // Store current position for recovery
-        console.log("video.currentTime=", video.currentTime);
-        const currentTime = isRecovery ? video.currentTime : 0;
-        console.log("currentTime=", currentTime);
-
         if (Hls.isSupported()) {
             this.hls = new Hls({
                 debug: false,
@@ -1418,7 +1414,7 @@ class MediaLibraryApp {
                 capLevelToPlayerSize: true,
                 // VOD-specific settings:
                 lowLatencyMode: false,
-                startPosition: isRecovery ? currentTime : 0,
+                startPosition: isRecovery ? this.recoveryPosition : 0,
             });
 
             this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
@@ -1431,7 +1427,7 @@ class MediaLibraryApp {
                 if (isRecovery) {
                     // Wait a moment for HLS to initialize, then for recovery, restore position and continue playing
                     setTimeout(() => {
-                        video.currentTime = currentTime;
+                        video.currentTime = this.recoveryPosition;
                         video.play().catch((error) => {
                             console.warn("Recovery autoplay failed:", error);
                         });
@@ -1498,6 +1494,11 @@ class MediaLibraryApp {
         }
 
         this.retryState.isRetrying = true;
+
+        // Store current playback position before requesting re-processing
+        const video = document.getElementById("video-player");
+        this.recoveryPosition = video ? video.currentTime : 0;
+        console.log("Storing recovery position:", this.recoveryPosition);
 
         try {
             const movieId = this.getMovieId(this.currentMovie);
