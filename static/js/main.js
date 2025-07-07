@@ -221,8 +221,8 @@ class MediaLibraryApp {
         );
         accountElements.forEach((element) => {
             element.innerHTML = `
-                <p>Username: ${this.currentUser.username}</p>
-                <p>Email: ${this.currentUser.email}</p>
+                <p>${this.currentUser.username}</p>
+                <p>(${this.currentUser.email})</p>
             `;
         });
     }

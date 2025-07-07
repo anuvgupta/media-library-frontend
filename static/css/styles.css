@@ -104,6 +104,25 @@ button.remove-access-btn:hover {
     background: rgba(255, 255, 255, 1);
 }
 
+div.account-section {
+    display: flex;
+    width: 100%;
+    align-items: center;
+}
+
+div.account-section-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    margin-left: 15px;
+    gap: 7px;
+}
+
+div.logout-btn {
+    height: 16.5px;
+    box-sizing: content-box;
+}
+
 @keyframes spin {
     0% {
         transform: rotate(0deg);
