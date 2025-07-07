@@ -1505,12 +1505,17 @@ class MediaLibraryApp {
 
         this.retryState.isRetrying = true;
 
-        // Store current playback position before requesting re-processing
+        // Store current playback position and pause the player
         const video = document.getElementById("video-player");
         this.recoveryPosition = (video ? video.currentTime : 0) - 5;
         this.recoveryPosition =
             this.recoveryPosition < 0 ? 0 : this.recoveryPosition;
         console.log("Storing recovery position:", this.recoveryPosition);
+
+        // Pause the video during recovery
+        if (video) {
+            video.pause();
+        }
 
         try {
             const movieId = this.getMovieId(this.currentMovie);
