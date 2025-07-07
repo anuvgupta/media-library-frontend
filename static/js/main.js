@@ -1359,6 +1359,16 @@ class MediaLibraryApp {
                         );
                     }
 
+                    if (this.currentLibraryOwner === this.getIdentityId()) {
+                        this.showStatus(
+                            "Processing movie from your device, please wait up to 2 minutes"
+                        );
+                    } else {
+                        this.showStatus(
+                            "Processing movie from the owner's device, please wait up to 2 minutes"
+                        );
+                    }
+
                     // Wait 5 seconds after request
                     await this.delay(5000);
                 }
