@@ -1517,6 +1517,13 @@ class MediaLibraryApp {
             video.pause();
         }
 
+        // Exit fullscreen if active
+        if (document.fullscreenElement === video) {
+            document.exitFullscreen().catch((err) => {
+                console.warn("Failed to exit fullscreen:", err);
+            });
+        }
+
         try {
             const movieId = this.getMovieId(this.currentMovie);
             const ownerIdentityId = this.currentLibraryOwner;
