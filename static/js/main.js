@@ -1297,7 +1297,7 @@ class MediaLibraryApp {
     }
 
     async initializeVideoPlayer(movie) {
-        this.showVideoLoading("Loading video stream...");
+        this.showVideoLoading("Loading movie...");
 
         try {
             this.playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
@@ -1344,7 +1344,7 @@ class MediaLibraryApp {
                     !this.retryState.isRetrying
                 ) {
                     this.retryState.isRetrying = true;
-                    this.showVideoLoading("Preparing video stream...");
+                    this.showVideoLoading("Processing movie...");
 
                     try {
                         await this.makeAuthenticatedRequest(
@@ -1359,15 +1359,9 @@ class MediaLibraryApp {
                         );
                     }
 
-                    if (this.currentLibraryOwner === this.getIdentityId()) {
-                        this.showStatus(
-                            "Processing movie from your device, please wait up to 2 minutes"
-                        );
-                    } else {
-                        this.showStatus(
-                            "Processing movie from the owner's device, please wait up to 2 minutes"
-                        );
-                    }
+                    this.showStatus(
+                        "Processing movie, please wait up to 2 minutes"
+                    );
 
                     // Wait 5 seconds after request
                     await this.delay(5000);
@@ -1526,7 +1520,7 @@ class MediaLibraryApp {
                 `/libraries/${ownerIdentityId}/movies/${movieId}/request`
             );
 
-            this.showStatus("Stream error detected. Re-processing video...");
+            this.showStatus("Stream error occurred. Re-processing movie...");
 
             // Start polling for the new playlist
             this.startStreamRecoveryPolling();
@@ -1541,7 +1535,7 @@ class MediaLibraryApp {
 
     async startStreamRecoveryPolling() {
         console.log("Starting stream recovery polling...");
-        this.showVideoLoading("Re-processing video stream...");
+        this.showVideoLoading("Re-processing movie...");
 
         const maxAttempts = 20;
         let attempts = 0;
