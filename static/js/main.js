@@ -26,6 +26,7 @@ class MediaLibraryApp {
             phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
             isRetrying: false,
         };
+        this.showStatusTimeout = null;
         this.initializeEventListeners();
         this.showLoadingView();
         this.checkExistingSession();
@@ -117,9 +118,14 @@ class MediaLibraryApp {
         statusElement.style.opacity = 1;
 
         // Auto-hide after 5 seconds
-        setTimeout(() => {
+        if (this.showStatusTimeout) {
+            clearTimeout(this.showStatusTimeout);
+        }
+
+        this.showStatusTimeout = setTimeout(() => {
             // statusElement.style.display = "none";
             statusElement.style.opacity = 0;
+            this.showStatusTimeout = null;
         }, 5000);
     }
 
