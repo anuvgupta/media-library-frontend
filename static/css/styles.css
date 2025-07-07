@@ -46,7 +46,8 @@ div#movie-details-content {
 }
 
 div#poster-container {
-    width: 130px;
+    width: 200px;
+    /* width: 130px; */
     height: auto;
     margin-right: 20px;
 }
