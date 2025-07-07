@@ -1456,9 +1456,9 @@ class MediaLibraryApp {
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 console.error("HLS error:", data);
                 if (
-                    data.fatal ||
-                    (data.type === "mediaError" &&
-                        data.details === "bufferStalledError")
+                    // data.fatal ||
+                    data.type === "mediaError" &&
+                    data.details === "bufferStalledError"
                 ) {
                     // this.hideVideoLoading();
                     // this.showPlayButton();
@@ -1467,6 +1467,8 @@ class MediaLibraryApp {
                     // );
                     this.handleStreamError(data);
                 }
+
+                // Maybe reload page when its data.fatal
             });
 
             this.hls.loadSource(streamUrl);
