@@ -1085,6 +1085,24 @@ class MediaLibraryApp {
         }
     }
 
+    async loadMovieSubtitles(movie) {
+        try {
+            const movieId = this.getMovieId(movie);
+            const ownerIdentityId = this.currentLibraryOwner;
+
+            const response = await this.makeAuthenticatedRequest(
+                "GET",
+                `/libraries/${ownerIdentityId}/movies/${movieId}/subtitles`
+            );
+
+            console.log("Loaded subtitles:", response.subtitles);
+            return response.subtitles || [];
+        } catch (error) {
+            console.warn("Failed to load subtitles:", error);
+            return [];
+        }
+    }
+
     updateMovieDescription(metadata) {
         // Find the description paragraph in the movie view
         const descriptionParagraph =
@@ -1308,7 +1326,11 @@ class MediaLibraryApp {
         try {
             this.playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
             // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
-            await this.setupHLSPlayer(this.playlistUrl, false);
+
+            // Load subtitles
+            const subtitles = await this.loadMovieSubtitles(movie);
+
+            await this.setupHLSPlayer(this.playlistUrl, false, subtitles);
         } catch (error) {
             console.error("Failed to initialize video player:", error);
             this.hideVideoLoading();
@@ -1404,7 +1426,7 @@ class MediaLibraryApp {
         throw new Error("Maximum retry attempts exceeded");
     }
 
-    async setupHLSPlayer(streamUrl, isRecovery = false) {
+    async setupHLSPlayer(streamUrl, isRecovery, subtitles = []) {
         // Destroy existing player if any
         if (this.hls) {
             this.hls.destroy();
@@ -1430,6 +1452,9 @@ class MediaLibraryApp {
             this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                 this.hideVideoLoading();
                 this.updateQualitySelector(data.levels);
+
+                // Add subtitle tracks
+                this.addSubtitleTracks(subtitles);
 
                 // Reset retry state after successful manifest parsing
                 this.resetRetryState();
@@ -1492,6 +1517,31 @@ class MediaLibraryApp {
         } else {
             throw new Error("Video streaming not supported in this browser");
         }
+    }
+
+    addSubtitleTracks(subtitles) {
+        const video = document.getElementById("video-player");
+        if (!video || subtitles.length === 0) return;
+
+        // Remove existing subtitle tracks
+        const existingTracks = video.querySelectorAll(
+            'track[kind="subtitles"]'
+        );
+        existingTracks.forEach((track) => track.remove());
+
+        // Add new subtitle tracks
+        subtitles.forEach((subtitle, index) => {
+            const track = document.createElement("track");
+            track.kind = "subtitles";
+            track.src = subtitle.url;
+            track.srclang = subtitle.language;
+            track.label = subtitle.label;
+            track.default = index === 0; // Make first track default
+
+            video.appendChild(track);
+        });
+
+        console.log(`✅ Added ${subtitles.length} subtitle tracks`);
     }
 
     isRetryableStreamError(errorData) {
@@ -1567,6 +1617,10 @@ class MediaLibraryApp {
         const maxAttempts = 20;
         let attempts = 0;
         let pollInterval = null;
+
+        // Load subtitles for recovery
+        const subtitles = await this.loadMovieSubtitles(this.currentMovie);
+
         setTimeout(async () => {
             pollInterval = setInterval(async () => {
                 attempts++;
@@ -1576,7 +1630,11 @@ class MediaLibraryApp {
 
                 try {
                     // Reload the HLS player with the same playlist URL
-                    await this.setupHLSPlayer(this.playlistUrl, true);
+                    await this.setupHLSPlayer(
+                        this.playlistUrl,
+                        true,
+                        subtitles
+                    );
 
                     // Check if the HLS player successfully loaded
                     if (this.hls && this.hls.media) {
