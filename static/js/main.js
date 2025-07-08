@@ -1455,11 +1455,7 @@ class MediaLibraryApp {
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 console.error("HLS error:", data);
-                if (
-                    // data.fatal ||
-                    data.type === "mediaError" &&
-                    data.details === "bufferStalledError"
-                ) {
+                if (this.isRetryableStreamError(data)) {
                     // this.hideVideoLoading();
                     // this.showPlayButton();
                     // this.showStatus(
@@ -1496,6 +1492,17 @@ class MediaLibraryApp {
         } else {
             throw new Error("Video streaming not supported in this browser");
         }
+    }
+
+    isRetryableStreamError(errorData) {
+        return (
+            // (errorData.fatal) ||
+            (errorData.type === "mediaError" &&
+                errorData.details === "bufferStalledError") ||
+            (errorData.type === "networkError" &&
+                errorData.details === "fragLoadError" &&
+                errorData.response.code === 403)
+        );
     }
 
     async handleStreamError(errorData) {
