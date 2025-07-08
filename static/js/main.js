@@ -1551,7 +1551,8 @@ class MediaLibraryApp {
                 errorData.details === "bufferStalledError") ||
             (errorData.type === "networkError" &&
                 errorData.details === "fragLoadError" &&
-                errorData.response.code === 403)
+                (errorData.response.code === 403 ||
+                    errorData.response.code === 404))
         );
     }
 
