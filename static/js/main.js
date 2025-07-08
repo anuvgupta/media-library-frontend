@@ -78,6 +78,8 @@ class MediaLibraryApp {
         document
             .getElementById("back-to-libraries-btn")
             .addEventListener("click", () => {
+                this.currentLibraryOwner = null; // Clear current library owner
+                this.currentLibraryData = null; // Clear library data
                 this.showLibrariesView();
                 this.clearLibraryPageContent();
                 this.clearMoviePageContent();
@@ -821,10 +823,9 @@ class MediaLibraryApp {
             console.error("Error loading library data:", error);
             if (error.statusCode === 403) {
                 this.showStatus("Access denied to this library");
-                this.showLibrariesView(); // Go back to libraries view
+                this.showLibrariesView();
+                this.updateUrl("libraries");
             } else if (error.statusCode === 404) {
-                // this.showStatus("Library not found");
-                // this.showLibrariesView();
                 this.currentLibraryData = null;
                 this.displayLibraryData();
             } else if (error.statusCode === 401) {
@@ -1878,7 +1879,7 @@ class MediaLibraryApp {
         };
     }
 
-    navigateToPage(urlParams) {
+    async navigateToPage(urlParams) {
         const { page, libraryOwner, movieId } = urlParams;
 
         if (!this.currentUser) {
@@ -1905,14 +1906,8 @@ class MediaLibraryApp {
                 }
                 break;
             case "movie":
-                if (libraryOwner && movieId && this.currentLibraryData) {
-                    const movie = this.findMovieById(movieId);
-                    if (movie) {
-                        this.showMovieView(movie);
-                    } else {
-                        this.showLibrariesView();
-                        this.updateUrl("libraries");
-                    }
+                if (libraryOwner && movieId) {
+                    await this.navigateToMovie(libraryOwner, movieId);
                 } else {
                     this.showLibrariesView();
                     this.updateUrl("libraries");
@@ -1938,6 +1933,59 @@ class MediaLibraryApp {
             }
         }
         return null;
+    }
+
+    async navigateToMovie(libraryOwner, movieId) {
+        try {
+            // Set the current library owner
+            this.currentLibraryOwner = libraryOwner;
+
+            // Check if we need to load library data
+            if (
+                !this.currentLibraryData ||
+                this.currentLibraryOwner !== libraryOwner
+            ) {
+                console.log("Loading library data for movie navigation...");
+                this.showLoadingView();
+
+                // Load the library data
+                const result = await this.makeAuthenticatedRequest(
+                    "GET",
+                    `/libraries/${libraryOwner}/library`
+                );
+                this.currentLibraryData = result;
+            }
+
+            // Now try to find the movie
+            const movie = this.findMovieById(movieId);
+            if (movie) {
+                this.showMovieView(movie);
+            } else {
+                console.warn("Movie not found with ID:", movieId);
+                this.showLibraryView(libraryOwner);
+                this.showStatus("Movie not found, showing library instead");
+            }
+        } catch (error) {
+            console.error("Error navigating to movie:", error);
+            if (error.statusCode === 403) {
+                this.showStatus("Access denied to this library");
+                this.showLibrariesView();
+                this.updateUrl("libraries");
+            } else if (error.statusCode === 404) {
+                this.showStatus("Library not found");
+                this.showLibrariesView();
+                this.updateUrl("libraries");
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error loading movie: " + (error.message || "Unknown error")
+                );
+                this.showLibrariesView();
+                this.updateUrl("libraries");
+            }
+        }
     }
 }
 
