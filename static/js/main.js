@@ -30,6 +30,12 @@ class MediaLibraryApp {
         this.initializeEventListeners();
         this.showLoadingView();
         this.checkExistingSession();
+
+        // Add popstate listener for browser back/forward
+        window.addEventListener("popstate", () => {
+            const urlParams = this.parseUrl();
+            this.navigateToPage(urlParams);
+        });
     }
 
     initializeEventListeners() {
@@ -132,16 +138,19 @@ class MediaLibraryApp {
     showSigninView() {
         this.hideAllViews();
         document.getElementById("signin-view").style.display = "block";
+        if (this.currentUser) this.updateUrl("signin");
     }
 
     showSignupView() {
         this.hideAllViews();
         document.getElementById("signup-view").style.display = "block";
+        this.updateUrl("signup");
     }
 
     showVerificationView() {
         this.hideAllViews();
         document.getElementById("verification-view").style.display = "block";
+        this.updateUrl("verify");
     }
 
     showLibrariesView(checkLibraryAccess = false) {
@@ -149,6 +158,7 @@ class MediaLibraryApp {
         document.getElementById("libraries-view").style.display = "block";
         this.updateAccountSection();
         this.loadLibraries(checkLibraryAccess);
+        this.updateUrl("libraries");
     }
 
     showLibraryView(ownerIdentityId) {
@@ -157,6 +167,7 @@ class MediaLibraryApp {
         document.getElementById("library-view").style.display = "block";
         this.updateAccountSection();
         this.loadLibraryData();
+        this.updateUrl("library", { libraryOwner: ownerIdentityId });
 
         // Show/hide library management section based on ownership
         const isOwner = this.currentUser.identityId === ownerIdentityId;
@@ -193,6 +204,12 @@ class MediaLibraryApp {
 
         // Show play button instead of auto-loading video
         this.showPlayButton();
+
+        const movieId = this.getMovieId(movie);
+        this.updateUrl("movie", {
+            libraryOwner: this.currentLibraryOwner,
+            movieId: movieId,
+        });
     }
 
     hideAllViews() {
@@ -251,7 +268,9 @@ class MediaLibraryApp {
             console.log("No valid existing session found");
         }
 
+        // If not signed in, show signin view
         this.showSigninView();
+        this.updateUrl("signin");
     }
 
     async handleLogin(fromVerify = false) {
@@ -368,6 +387,14 @@ class MediaLibraryApp {
                 // Don't fail the entire verification - they can still use the app
             }
             this.showStatus("Email verified successfully!");
+            // After successful verification, go to libraries
+            setTimeout(
+                (() => {
+                    this.showLibrariesView();
+                    this.updateUrl("libraries");
+                }).bind(this),
+                5000
+            );
         } catch (error) {
             console.error("Verification error:", error);
             this.showStatus(this.getErrorMessage(error));
@@ -426,7 +453,20 @@ class MediaLibraryApp {
         const identityId = await this.getIdentityId();
         this.currentUser.identityId = identityId;
 
-        this.showLibrariesView(true);
+        // Check URL for navigation
+        const urlParams = this.parseUrl();
+        if (
+            urlParams.page &&
+            urlParams.page !== "signin" &&
+            urlParams.page !== "signup" &&
+            urlParams.page !== "verify"
+        ) {
+            this.navigateToPage(urlParams);
+        } else {
+            this.showLibrariesView(true);
+            this.updateUrl("libraries");
+        }
+
         this.showStatus("Successfully signed in!");
     }
 
@@ -1810,6 +1850,94 @@ class MediaLibraryApp {
             type: "application/vnd.apple.mpegurl",
         });
         return URL.createObjectURL(blob);
+    }
+
+    updateUrl(page, params = {}) {
+        const url = new URL(window.location);
+        url.searchParams.set("p", page);
+
+        // Clear existing params and set new ones
+        ["l", "m"].forEach((param) => url.searchParams.delete(param));
+
+        if (params.libraryOwner) {
+            url.searchParams.set("l", params.libraryOwner);
+        }
+        if (params.movieId) {
+            url.searchParams.set("m", params.movieId);
+        }
+
+        window.history.pushState(null, "", url.toString());
+    }
+
+    parseUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            page: params.get("p"),
+            libraryOwner: params.get("l"),
+            movieId: params.get("m"),
+        };
+    }
+
+    navigateToPage(urlParams) {
+        const { page, libraryOwner, movieId } = urlParams;
+
+        if (!this.currentUser) {
+            this.showSigninView();
+            return;
+        }
+
+        switch (page) {
+            case "signin":
+                this.showSigninView();
+                break;
+            case "signup":
+                this.showSignupView();
+                break;
+            case "verify":
+                this.showVerificationView();
+                break;
+            case "library":
+                if (libraryOwner) {
+                    this.showLibraryView(libraryOwner);
+                } else {
+                    this.showLibrariesView();
+                    this.updateUrl("libraries");
+                }
+                break;
+            case "movie":
+                if (libraryOwner && movieId && this.currentLibraryData) {
+                    const movie = this.findMovieById(movieId);
+                    if (movie) {
+                        this.showMovieView(movie);
+                    } else {
+                        this.showLibrariesView();
+                        this.updateUrl("libraries");
+                    }
+                } else {
+                    this.showLibrariesView();
+                    this.updateUrl("libraries");
+                }
+                break;
+            case "libraries":
+            default:
+                this.showLibrariesView();
+                this.updateUrl("libraries");
+                break;
+        }
+    }
+
+    findMovieById(movieId) {
+        if (!this.currentLibraryData) return null;
+
+        for (const collection of Object.keys(this.currentLibraryData)) {
+            const movie = this.currentLibraryData[collection].find(
+                (m) => this.getMovieId(m) === movieId
+            );
+            if (movie) {
+                return { ...movie, collection };
+            }
+        }
+        return null;
     }
 }
 
