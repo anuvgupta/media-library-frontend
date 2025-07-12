@@ -1926,7 +1926,7 @@ class MediaLibraryApp {
 
         for (const collection of Object.keys(this.currentLibraryData)) {
             const movie = this.currentLibraryData[collection].find(
-                (m) => this.getMovieId(m) === movieId
+                (m) => this.getMovieId({ ...m, collection }) === movieId
             );
             if (movie) {
                 return { ...movie, collection };
