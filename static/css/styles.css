@@ -50,6 +50,15 @@ body {
     height: 25px;
 }
 
+div#status-message {
+    display: block;
+    background: #f0f0f0;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
 div#movie-details-container {
     display: flex;
 }
