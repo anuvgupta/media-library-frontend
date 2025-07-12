@@ -26,7 +26,11 @@ class MediaLibraryApp {
             phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
             isRetrying: false,
         };
+
         this.showStatusTimeout = null;
+        this.positionSaveInterval = null;
+        this.lastSavedPosition = 0;
+
         this.initializeEventListeners();
         this.showLoadingView();
         this.checkExistingSession();
@@ -117,6 +121,42 @@ class MediaLibraryApp {
             .addEventListener("keypress", (e) => {
                 if (e.key === "Enter") this.handleVerification();
             });
+    }
+
+    savePlaybackPosition(movieId, position) {
+        const key = `moviePosition_${movieId}`;
+        localStorage.setItem(key, position.toString());
+        this.lastSavedPosition = position;
+    }
+
+    getSavedPlaybackPosition(movieId) {
+        const key = `moviePosition_${movieId}`;
+        const saved = localStorage.getItem(key);
+        return saved ? parseFloat(saved) : 0;
+    }
+
+    startPositionTracking(movieId) {
+        this.stopPositionTracking(); // Clear any existing interval
+
+        this.positionSaveInterval = setInterval(() => {
+            const video = document.getElementById("video-player");
+            if (video && !video.paused && video.currentTime > 0) {
+                // Only save if position changed significantly (avoid excessive saves)
+                if (Math.abs(video.currentTime - this.lastSavedPosition) > 5) {
+                    console.log(
+                        `Saving position as ${video.currentTime} for movie ${movieId}`
+                    );
+                    this.savePlaybackPosition(movieId, video.currentTime);
+                }
+            }
+        }, 30000); // Save every 30 seconds
+    }
+
+    stopPositionTracking() {
+        if (this.positionSaveInterval) {
+            clearInterval(this.positionSaveInterval);
+            this.positionSaveInterval = null;
+        }
     }
 
     showStatus(message, type = "info") {
@@ -590,6 +630,7 @@ class MediaLibraryApp {
         this.currentLibraryOwner = null;
         this.currentLibraryData = null;
         this.libraries = [];
+        this.stopPositionTracking();
         this.showSigninView();
         this.showStatus("Successfully signed out");
         this.clearContentSections();
@@ -1362,6 +1403,7 @@ class MediaLibraryApp {
     }
 
     async initializeVideoPlayer(movie) {
+        this.stopPositionTracking();
         this.showVideoLoading("Loading movie...");
 
         try {
@@ -1500,23 +1542,27 @@ class MediaLibraryApp {
                 // Reset retry state after successful manifest parsing
                 this.resetRetryState();
 
-                if (isRecovery) {
-                    // Wait a moment for HLS to initialize, then for recovery, restore position and continue playing
-                    setTimeout(() => {
+                const movieId = this.getMovieId(this.currentMovie);
+
+                setTimeout(() => {
+                    if (isRecovery) {
                         video.currentTime = this.recoveryPosition;
                         video.play().catch((error) => {
                             console.warn("Recovery autoplay failed:", error);
                         });
-                    }, 100);
-                } else {
-                    // Wait a moment for HLS to initialize, then force start position and play from beginning
-                    setTimeout(() => {
-                        video.currentTime = 0;
+                    } else {
+                        // Check for saved position
+                        const savedPosition =
+                            this.getSavedPlaybackPosition(movieId);
+                        video.currentTime = savedPosition;
                         video.play().catch((error) => {
                             console.warn("Autoplay failed:", error);
                         });
-                    }, 100);
-                }
+                    }
+
+                    // Start position tracking
+                    this.startPositionTracking(movieId);
+                }, 100);
             });
 
             this.hls.on(Hls.Events.ERROR, (event, data) => {
@@ -1538,17 +1584,23 @@ class MediaLibraryApp {
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
             video.src = streamUrl;
 
+            const movieId = this.getMovieId(this.currentMovie);
+
             if (!isRecovery) {
                 video.addEventListener(
                     "loadedmetadata",
                     () => {
-                        video.currentTime = 0;
+                        const savedPosition =
+                            this.getSavedPlaybackPosition(movieId);
+                        video.currentTime = savedPosition;
                         this.hideVideoLoading();
+                        this.startPositionTracking(movieId);
                     },
                     { once: true }
                 );
             } else {
                 this.hideVideoLoading();
+                this.startPositionTracking(movieId);
             }
 
             // For native HLS support (Safari), start playing automatically
@@ -1793,6 +1845,8 @@ class MediaLibraryApp {
     }
 
     clearMoviePageContent() {
+        this.stopPositionTracking();
+
         // Reset movie details
         document.getElementById("movie-description").textContent = "Loading...";
         document.getElementById("movie-title").textContent = "Movie Title";
