@@ -30,6 +30,7 @@ class MediaLibraryApp {
         this.showStatusTimeout = null;
         this.positionSaveInterval = null;
         this.lastSavedPosition = 0;
+        this.positionSaveInterval = 20000;
 
         this.initializeEventListeners();
         this.showLoadingView();
@@ -149,7 +150,7 @@ class MediaLibraryApp {
                     this.savePlaybackPosition(movieId, video.currentTime);
                 }
             }
-        }, 30000); // Save every 30 seconds
+        }, this.positionSaveInterval); // Save every 30 seconds
     }
 
     stopPositionTracking() {
