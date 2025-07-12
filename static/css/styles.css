@@ -37,6 +37,19 @@ body {
     color: #666;
 }
 
+.shared-with-header {
+    display: flex;
+    align-items: center;
+}
+
+.shared-with-header h4 {
+    width: 300px;
+}
+
+.shared-with-header button {
+    height: 25px;
+}
+
 div#movie-details-container {
     display: flex;
 }
