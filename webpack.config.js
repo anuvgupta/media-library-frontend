@@ -18,6 +18,19 @@ const JS_SCRIPTS_FOLDER = "./static/js";
 const IMG_ASSET_FOLDER = "./static/img";
 const FAVICON_PATH = "static/favicon.ico";
 
+// Helper function to minify inline JS
+async function minifyInlineJs(code) {
+    if (IS_DEVELOPMENT) {
+        return code; // Don't minify in development
+    }
+    const result = await minify(code, {
+        compress: {
+            drop_console: !LOGS_ENABLED,
+        },
+    });
+    return result.code;
+}
+
 // Create minified init code synchronously
 const initScript = fs.readFileSync(INIT_SCRIPT_PATH, "utf-8");
 let minifiedInitScript = "";
