@@ -1,4 +1,4 @@
-// theme.js
+// theme/system.js
 
 export const themeToggle = {
     THEME_STORAGE_KEY: "utp",

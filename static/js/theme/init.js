@@ -1,4 +1,4 @@
-// theme-init.js
+// theme/init.js
 
 (() => {
     const THEME_STORAGE_KEY = "utp";
