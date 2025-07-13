@@ -102,10 +102,6 @@ body {
     height: 25px;
 }
 
-input#share-with-input {
-    margin-left: 5px;
-}
-
 div#status-message {
     display: block;
     padding: 10px;
@@ -137,6 +133,12 @@ input {
     border: 1px solid var(--border-color);
     color: var(--text-color);
     border-radius: 4px;
+    transition: background-color .3s ease,
+        color .3s ease;
+}
+
+input#share-with-input {
+    margin-left: 5px;
 }
 
 hr {
