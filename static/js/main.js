@@ -5,6 +5,7 @@ import { HttpRequest } from "@aws-sdk/protocol-http";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import Hls from "hls.js";
 
+import * as themeSystem from "./theme/system.js";
 import { CONFIG } from "./config/config.js";
 
 class MediaLibraryApp {

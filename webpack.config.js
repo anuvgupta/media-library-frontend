@@ -18,6 +18,19 @@ const JS_SCRIPTS_FOLDER = "./static/js";
 const IMG_ASSET_FOLDER = "./static/img";
 const FAVICON_PATH = "static/favicon.ico";
 
+// Create minified init code synchronously
+const initScript = fs.readFileSync(INIT_SCRIPT_PATH, "utf-8");
+let minifiedInitScript = "";
+(async () => {
+    minifiedInitScript = await minifyInlineJs(initScript);
+})();
+
+// Template helpers
+const templateHelpers = {
+    getInitScript: () =>
+        `<script type="text/javascript">${minifiedInitScript}</script>`,
+};
+
 // Get all error pages
 const errorPages = fs
     .readdirSync(`${ERROR_PAGES_FOLDER}`)
@@ -117,6 +130,7 @@ module.exports = {
             template: "./static/index.html",
             filename: "index.html",
             chunks: ["main", "styles"],
+            templateParameters: templateHelpers, // Use template helpers here
             minify: IS_DEVELOPMENT
                 ? false
                 : {
