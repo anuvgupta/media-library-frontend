@@ -17,7 +17,9 @@
     --progress-bg: #f0f0f0;
     --status-text: #666;
     --details-text: #888;
-    --theme-button-bg: #fdfdfd;
+    /* --theme-button-bg: #fdfdfd;*/
+    --theme-button-bg: #3596fc;
+    --theme-icon-color: #fff;
 }
 
 /* Dark theme variables */
@@ -38,6 +40,7 @@
     --status-text: #999;
     --details-text: #888;
     --theme-button-bg: #2d2d2d;
+    --theme-icon-color: #fff;
 }
 
 /* Prevent theme flash */
@@ -360,11 +363,12 @@ div.logout-btn {
     width: 20px;
     height: 20px;
     transition: all 0.3s ease;
-    stroke: currentColor;
+    stroke: var(--theme-icon-color);
+    /* stroke: currentColor; */
     stroke-width: 2;
     fill: none;
     position: absolute;
-    opacity: 0.7;
+    opacity: 1;
 }
 
 /* Keep full opacity in dark mode */
