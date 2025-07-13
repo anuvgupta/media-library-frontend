@@ -72,7 +72,7 @@ body {
     align-items: center;
     padding: 10px 0;
     width: 100%;
-    max-width: 400px;
+    max-width: 500px;
 }
 
 .shared-user-info {
@@ -92,14 +92,30 @@ body {
 .shared-with-header {
     display: flex;
     align-items: center;
+    width: 100%;
+    max-width: 500px;
 }
 
-.shared-with-header h4 {
+/* .shared-with-header h4 {
     width: 300px;
-}
+} */
 
 .shared-with-header button {
     height: 25px;
+}
+
+.share-form {
+    display: flex;
+    width: 100%;
+    max-width: 500px;
+    align-items: center;
+}
+
+.share-form-inner-container {
+    display: flex;
+    flex: 1;
+    gap: 10px;
+    align-items: center;
 }
 
 div#status-message {
@@ -135,10 +151,6 @@ input {
     border-radius: 4px;
     transition: background-color .3s ease,
         color .3s ease;
-}
-
-input#share-with-input {
-    margin-left: 5px;
 }
 
 hr {
