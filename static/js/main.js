@@ -34,6 +34,8 @@ class MediaLibraryApp {
         this.positionSaveInterval = 20000;
         this.statusPollingInterval = null;
         this.isPollingStatus = false;
+        this.lastStatusResponse = null;
+        this.isStreamError = false;
 
         this.initializeEventListeners();
         this.showLoadingView();
@@ -270,6 +272,31 @@ class MediaLibraryApp {
         if (statusBar) {
             statusBar.classList.add("hidden");
         }
+    }
+
+    resetMovieStatusBar() {
+        const messageEl = document.getElementById("status-message-text");
+        const percentageEl = document.getElementById("status-percentage");
+        const progressFillEl = document.getElementById("status-progress-fill");
+        const etaEl = document.getElementById("status-eta");
+        const stageEl = document.getElementById("status-stage");
+        const statusBar = document.getElementById("movie-status-bar");
+
+        if (!messageEl || !percentageEl || !progressFillEl) return;
+
+        // Reset all status bar content to default values
+        messageEl.textContent = "Processing movie...";
+        percentageEl.textContent = "0%";
+        progressFillEl.style.width = "0%";
+        etaEl.textContent = "";
+        stageEl.textContent = "";
+
+        // Remove any processing animations
+        if (statusBar) {
+            statusBar.classList.remove("processing");
+        }
+
+        console.log("Movie status bar reset");
     }
 
     hideAllViews() {
@@ -1425,13 +1452,20 @@ class MediaLibraryApp {
         this.showVideoLoading("Loading movie...");
 
         try {
-            this.playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
-            // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
+            const playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
+            if (playlistUrl) {
+                this.playlistUrl = playlistUrl;
+                // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
 
-            // Load subtitles
-            const subtitles = await this.loadMovieSubtitles(movie);
+                // Load subtitles
+                const subtitles = await this.loadMovieSubtitles(movie);
 
-            await this.setupHLSPlayer(this.playlistUrl, false, subtitles);
+                await this.setupHLSPlayer(this.playlistUrl, false, subtitles);
+            } else {
+                console.log(
+                    "getMovieStreamUrlWithRetry returned empty, will initialize video player later"
+                );
+            }
         } catch (error) {
             console.error("Failed to initialize video player:", error);
             this.hideVideoLoading();
@@ -1484,7 +1518,7 @@ class MediaLibraryApp {
 
                         // Show status bar and start polling
                         this.showMovieStatusBar();
-                        this.pollMovieStatus(movie);
+                        this.pollMovieStatus(movie, false);
                     } catch (requestError) {
                         console.warn(
                             "Failed to send processing request:",
@@ -1496,8 +1530,13 @@ class MediaLibraryApp {
                         "Processing movie, please wait up to 2 minutes"
                     );
 
-                    // Wait 5 seconds after request
-                    await this.delay(5000);
+                    // Don't try reprocess until status reaches 40+
+                    this.resetRetryState();
+
+                    // // Wait 5 seconds after request
+                    // await this.delay(5000);
+
+                    return null;
                 }
 
                 this.retryState.attempts++;
@@ -1596,6 +1635,7 @@ class MediaLibraryApp {
                     // this.showStatus(
                     //     "Error playing video stream, re-requesting movie"
                     // );
+                    this.isStreamError = true;
                     this.handleStreamError(data);
                 }
 
@@ -1719,10 +1759,11 @@ class MediaLibraryApp {
 
             // Show status bar and start polling for recovery
             this.showMovieStatusBar();
-            this.pollMovieStatus(this.currentMovie);
+            this.pollMovieStatus(this.currentMovie, true);
 
-            // Start polling for the new playlist
-            this.startStreamRecoveryPolling();
+            // Don't try reprocess until status reaches 40+
+            // // Start polling for the new playlist
+            // this.startStreamRecoveryPolling();
         } catch (requestError) {
             console.error("Failed to request re-processing:", requestError);
             this.retryState.isRetrying = false;
@@ -1765,6 +1806,7 @@ class MediaLibraryApp {
                         );
                         clearInterval(pollInterval);
                         this.retryState.isRetrying = false;
+                        this.isStreamError = false;
                         this.showStatus("Video stream recovered successfully!");
                         return;
                     }
@@ -1874,7 +1916,7 @@ class MediaLibraryApp {
 
     clearMoviePageContent() {
         this.stopPositionTracking();
-        this.stopStatusPolling(); // Add this line
+        this.stopStatusPolling(); // Already added
 
         // Reset movie details
         document.getElementById("movie-description").textContent = "Loading...";
@@ -1884,8 +1926,9 @@ class MediaLibraryApp {
         document.getElementById("movie-quality").textContent = "Unknown";
         document.getElementById("poster-container").innerHTML = "";
 
-        // Hide status bar
-        this.hideMovieStatusBar(); // Add this line
+        // Hide and reset status bar
+        this.hideMovieStatusBar(); // Already added
+        this.resetMovieStatusBar(); // Add this new method call
 
         // Clear video player
         if (this.hls) {
@@ -1926,6 +1969,7 @@ class MediaLibraryApp {
         clearLibraryPageContent();
         clearMoviePageContent();
         clearAccountContent();
+        this.resetMovieStatusBar();
     }
 
     delay(ms) {
@@ -2084,9 +2128,22 @@ class MediaLibraryApp {
 
         if (!messageEl || !percentageEl || !progressFillEl) return;
 
-        // Update message
-        messageEl.textContent =
-            statusData.message || this.getStatusMessage(statusData.stageName);
+        // Update message - use custom message if provided, otherwise use default
+        let displayMessage = statusData.message;
+        if (!displayMessage) {
+            if (
+                statusData.stageName === "uploading" &&
+                statusData.percentage >= 40
+            ) {
+                displayMessage =
+                    statusData.percentage === 40
+                        ? "Stream preview ready"
+                        : "Streaming rest of movie";
+            } else {
+                displayMessage = this.getStatusMessage(statusData.stageName);
+            }
+        }
+        messageEl.textContent = displayMessage;
 
         // Update percentage
         percentageEl.textContent = `${Math.round(statusData.percentage)}%`;
@@ -2123,29 +2180,29 @@ class MediaLibraryApp {
 
     getStatusMessage(stageName) {
         const messages = {
-            starting: "Starting movie processing...",
-            reencoding: "Converting video format...",
-            converting_hls: "Preparing video segments...",
-            uploading: "Uploading video segments...",
-            completed: "Movie processing completed!",
-            failed: "Movie processing failed",
+            starting: "Processing movie",
+            reencoding: "Encoding movie",
+            converting_hls: "Converting to stream",
+            uploading: "Streaming movie",
+            completed: "Ready to watch",
+            failed: "Processing failed",
         };
-        return messages[stageName] || "Processing movie...";
+        return messages[stageName] || "Processing";
     }
 
     getStageDisplayName(stageName) {
         const stages = {
-            starting: "Initializing",
-            reencoding: "Converting",
-            converting_hls: "Segmenting",
-            uploading: "Uploading",
+            starting: "Processing",
+            reencoding: "Encoding",
+            converting_hls: "Converting",
+            uploading: "Streaming",
             completed: "Ready",
             failed: "Error",
         };
         return stages[stageName] || stageName;
     }
 
-    async pollMovieStatus(movie) {
+    async pollMovieStatus(movie, isRecovery = false) {
         if (this.isPollingStatus) {
             console.log("Status polling already active");
             return;
@@ -2164,8 +2221,25 @@ class MediaLibraryApp {
                     `/libraries/${ownerIdentityId}/movies/${movieId}/status`
                 );
 
+                this.lastStatusResponse = statusResponse;
+
                 console.log("Status update:", statusResponse);
                 this.updateMovieStatusBar(statusResponse);
+
+                if (
+                    statusResponse.stageName === "uploading" &&
+                    statusResponse.percentage >= 40
+                ) {
+                    if (isRecovery) {
+                        if (this.isStreamError) {
+                            this.startStreamRecoveryPolling();
+                        }
+                    } else {
+                        if (!this.playlistUrl) {
+                            this.onPlayButtonClick();
+                        }
+                    }
+                }
 
                 // Stop polling when completed or failed
                 if (
@@ -2178,7 +2252,7 @@ class MediaLibraryApp {
                         // Hide status bar after a delay when completed
                         setTimeout(() => {
                             this.hideMovieStatusBar();
-                        }, 3000);
+                        }, 10000);
                     }
                 }
             } catch (error) {
