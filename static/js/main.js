@@ -1642,7 +1642,8 @@ class MediaLibraryApp {
         return (
             // (errorData.fatal) ||
             (errorData.type === "mediaError" &&
-                errorData.details === "bufferStalledError") ||
+                (errorData.details === "bufferStalledError" ||
+                    errorData.details === "bufferAppendError")) ||
             (errorData.type === "networkError" &&
                 errorData.details === "fragLoadError" &&
                 (errorData.response.code === 403 ||
