@@ -40,6 +40,11 @@
     --theme-button-bg: #2d2d2d;
 }
 
+/* Prevent theme flash */
+.theme-transition-disabled * {
+    transition: none !important;
+}
+
 * {
     font-family: Source Sans Pro, Verdana, Geneva, Tahoma, sans-serif;
 }
@@ -52,6 +57,8 @@ body {
     box-sizing: border-box;
     background-color: var(--bg-color);
     color: var(--text-color);
+    transition: background-color .3s ease,
+        color .3s ease;
 }
 
 .section-spacer {
