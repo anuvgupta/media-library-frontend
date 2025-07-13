@@ -239,6 +239,85 @@ div.logout-btn {
 }
 
 
+/* Movie Status Bar */
+.movie-status-bar {
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.movie-status-bar.hidden {
+    display: none;
+}
+
+.status-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.status-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+}
+
+.status-text #status-message-text {
+    color: var(--text-color);
+}
+
+.status-text #status-percentage {
+    color: var(--navbar-bg);
+    font-weight: 600;
+}
+
+.status-progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: var(--progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.status-progress-fill {
+    height: 100%;
+    background-color: var(--navbar-bg);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.status-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    color: var(--status-text);
+}
+
+.status-details span:empty {
+    display: none;
+}
+
+/* Status bar animations */
+.movie-status-bar.processing .status-progress-fill {
+    background: linear-gradient(45deg, var(--navbar-bg) 25%, transparent 25%, transparent 50%, var(--navbar-bg) 50%, var(--navbar-bg) 75%, transparent 75%);
+    background-size: 20px 20px;
+    animation: progress-stripes 1s linear infinite;
+}
+
+@keyframes progress-stripes {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 20px 0;
+    }
+}
+
+
 .theme-toggle-bar {
     position: fixed;
     bottom: 2rem;

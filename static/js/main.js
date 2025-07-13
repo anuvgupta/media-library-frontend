@@ -32,6 +32,8 @@ class MediaLibraryApp {
         this.positionSaveInterval = null;
         this.lastSavedPosition = 0;
         this.positionSaveInterval = 20000;
+        this.statusPollingInterval = null;
+        this.isPollingStatus = false;
 
         this.initializeEventListeners();
         this.showLoadingView();
@@ -254,6 +256,20 @@ class MediaLibraryApp {
             libraryOwner: this.currentLibraryOwner,
             movieId: movieId,
         });
+    }
+
+    showMovieStatusBar() {
+        const statusBar = document.getElementById("movie-status-bar");
+        if (statusBar) {
+            statusBar.classList.remove("hidden");
+        }
+    }
+
+    hideMovieStatusBar() {
+        const statusBar = document.getElementById("movie-status-bar");
+        if (statusBar) {
+            statusBar.classList.add("hidden");
+        }
     }
 
     hideAllViews() {
@@ -1465,6 +1481,10 @@ class MediaLibraryApp {
                             `/libraries/${ownerIdentityId}/movies/${movieId}/request`
                         );
                         console.log("Processing request sent");
+
+                        // Show status bar and start polling
+                        this.showMovieStatusBar();
+                        this.pollMovieStatus(movie);
                     } catch (requestError) {
                         console.warn(
                             "Failed to send processing request:",
@@ -1496,6 +1516,7 @@ class MediaLibraryApp {
                     this.retryState.attempts >= 5
                 ) {
                     this.retryState.phase = "failed";
+                    this.stopStatusPolling(); // Stop polling on failure
                     throw new Error(
                         "Video processing timed out. Please try again later."
                     );
@@ -1696,6 +1717,10 @@ class MediaLibraryApp {
 
             this.showStatus("Stream error occurred. Re-processing movie...");
 
+            // Show status bar and start polling for recovery
+            this.showMovieStatusBar();
+            this.pollMovieStatus(this.currentMovie);
+
             // Start polling for the new playlist
             this.startStreamRecoveryPolling();
         } catch (requestError) {
@@ -1849,6 +1874,7 @@ class MediaLibraryApp {
 
     clearMoviePageContent() {
         this.stopPositionTracking();
+        this.stopStatusPolling(); // Add this line
 
         // Reset movie details
         document.getElementById("movie-description").textContent = "Loading...";
@@ -1857,6 +1883,9 @@ class MediaLibraryApp {
         document.getElementById("movie-runtime").textContent = "Unknown";
         document.getElementById("movie-quality").textContent = "Unknown";
         document.getElementById("poster-container").innerHTML = "";
+
+        // Hide status bar
+        this.hideMovieStatusBar(); // Add this line
 
         // Clear video player
         if (this.hls) {
@@ -2043,6 +2072,141 @@ class MediaLibraryApp {
                 this.updateUrl("libraries");
             }
         }
+    }
+
+    updateMovieStatusBar(statusData) {
+        const messageEl = document.getElementById("status-message-text");
+        const percentageEl = document.getElementById("status-percentage");
+        const progressFillEl = document.getElementById("status-progress-fill");
+        const etaEl = document.getElementById("status-eta");
+        const stageEl = document.getElementById("status-stage");
+        const statusBar = document.getElementById("movie-status-bar");
+
+        if (!messageEl || !percentageEl || !progressFillEl) return;
+
+        // Update message
+        messageEl.textContent =
+            statusData.message || this.getStatusMessage(statusData.stageName);
+
+        // Update percentage
+        percentageEl.textContent = `${Math.round(statusData.percentage)}%`;
+
+        // Update progress bar
+        progressFillEl.style.width = `${statusData.percentage}%`;
+
+        // Update ETA if available
+        if (statusData.eta) {
+            const eta = new Date(statusData.eta);
+            const now = new Date();
+            const diffMinutes = Math.round(
+                (eta.getTime() - now.getTime()) / 60000
+            );
+            etaEl.textContent = diffMinutes > 0 ? `ETA: ${diffMinutes}m` : "";
+        } else {
+            etaEl.textContent = "";
+        }
+
+        // Update stage
+        stageEl.textContent = this.getStageDisplayName(statusData.stageName);
+
+        // Add processing animation for active stages
+        if (
+            statusData.stageName === "reencoding" ||
+            statusData.stageName === "converting_hls" ||
+            statusData.stageName === "uploading"
+        ) {
+            statusBar.classList.add("processing");
+        } else {
+            statusBar.classList.remove("processing");
+        }
+    }
+
+    getStatusMessage(stageName) {
+        const messages = {
+            starting: "Starting movie processing...",
+            reencoding: "Converting video format...",
+            converting_hls: "Preparing video segments...",
+            uploading: "Uploading video segments...",
+            completed: "Movie processing completed!",
+            failed: "Movie processing failed",
+        };
+        return messages[stageName] || "Processing movie...";
+    }
+
+    getStageDisplayName(stageName) {
+        const stages = {
+            starting: "Initializing",
+            reencoding: "Converting",
+            converting_hls: "Segmenting",
+            uploading: "Uploading",
+            completed: "Ready",
+            failed: "Error",
+        };
+        return stages[stageName] || stageName;
+    }
+
+    async pollMovieStatus(movie) {
+        if (this.isPollingStatus) {
+            console.log("Status polling already active");
+            return;
+        }
+
+        this.isPollingStatus = true;
+        const movieId = this.getMovieId(movie);
+        const ownerIdentityId = this.currentLibraryOwner;
+
+        console.log("Starting status polling for movie:", movieId);
+
+        this.statusPollingInterval = setInterval(async () => {
+            try {
+                const statusResponse = await this.makeAuthenticatedRequest(
+                    "GET",
+                    `/libraries/${ownerIdentityId}/movies/${movieId}/status`
+                );
+
+                console.log("Status update:", statusResponse);
+                this.updateMovieStatusBar(statusResponse);
+
+                // Stop polling when completed or failed
+                if (
+                    statusResponse.stageName === "completed" ||
+                    statusResponse.stageName === "failed"
+                ) {
+                    this.stopStatusPolling();
+
+                    if (statusResponse.stageName === "completed") {
+                        // Hide status bar after a delay when completed
+                        setTimeout(() => {
+                            this.hideMovieStatusBar();
+                        }, 3000);
+                    }
+                }
+            } catch (error) {
+                console.warn("Failed to get movie status:", error);
+
+                // If we get 404, the status doesn't exist yet or movie finished processing
+                if (error.statusCode === 404) {
+                    // Continue polling for a bit in case status hasn't been created yet
+                    // Status polling will be stopped by retry logic or completion
+                } else if (
+                    error.statusCode === 403 ||
+                    error.statusCode === 401
+                ) {
+                    // Auth issues - stop polling
+                    this.stopStatusPolling();
+                }
+                // For other errors, continue polling
+            }
+        }, 8000); // Poll every 8 seconds
+    }
+
+    stopStatusPolling() {
+        if (this.statusPollingInterval) {
+            clearInterval(this.statusPollingInterval);
+            this.statusPollingInterval = null;
+        }
+        this.isPollingStatus = false;
+        console.log("Stopped status polling");
     }
 }
 
