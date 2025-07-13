@@ -26,7 +26,7 @@ export const CONFIG = {
     awsMediaBucket: "media-library-media-738123590383-dev",
     awsPlaylistBucket: "media-library-playlist-738123590383-dev",
 
-    streamRecoveryRetryInterval: 8000,
+    streamRecoveryRetryInterval: 5000, //8000,
 };
 
 // Example of how to get these values from your CDK deployment:
