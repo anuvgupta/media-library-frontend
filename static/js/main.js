@@ -1762,7 +1762,7 @@ class MediaLibraryApp {
                     );
                 }
             }, CONFIG.streamRecoveryRetryInterval);
-        }, CONFIG.streamRecoveryRetryInterval);
+        }, 1500); //CONFIG.streamRecoveryRetryInterval);
     }
 
     resetRetryState() {
