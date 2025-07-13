@@ -27,7 +27,8 @@
     --text-color: #ffffff;
     --border-color: #404040;
     --shadow-color: rgba(0, 0, 0, 0.3);
-    --navbar-bg: #222222;
+    /* --navbar-bg: #222222; */
+    --navbar-bg: #007bff;
     --navbar-text: #ffffff;
     --input-bg: #3d3d3d;
     --error-color: #ff6b6b;
