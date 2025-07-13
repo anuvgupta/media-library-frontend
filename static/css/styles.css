@@ -1,5 +1,7 @@
+@import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,400,500,600");
+
 * {
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-family: Source Sans Pro, Verdana, Geneva, Tahoma, sans-serif;
 }
 
 body {
