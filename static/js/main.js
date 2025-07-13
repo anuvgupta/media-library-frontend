@@ -1483,92 +1483,45 @@ class MediaLibraryApp {
     }
 
     async getMovieStreamUrlWithRetry(movie) {
-        this.resetRetryState();
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
-        while (this.retryState.phase !== "failed") {
+        try {
+            // Single attempt to get stream URL
+            return await this.getMovieStreamUrl(movie);
+        } catch (error) {
+            console.log(
+                "Stream URL not ready, requesting processing:",
+                error.message
+            );
+
+            // Request processing
+            this.showVideoLoading("Processing movie...");
+
             try {
-                const result = await this.getMovieStreamUrl(movie);
-
-                // Reset retry state after successful stream URL retrieval
-                this.resetRetryState();
-
-                return result;
-            } catch (error) {
-                console.log(
-                    `Attempt ${this.retryState.attempts + 1} failed:`,
-                    error.message
+                await this.makeAuthenticatedRequest(
+                    "POST",
+                    `/libraries/${ownerIdentityId}/movies/${movieId}/request`
                 );
+                console.log("Processing request sent");
 
-                // Request processing if this is the first failure
-                if (
-                    this.retryState.attempts === 0 &&
-                    !this.retryState.isRetrying
-                ) {
-                    this.retryState.isRetrying = true;
-                    this.showVideoLoading("Processing movie...");
-
-                    try {
-                        await this.makeAuthenticatedRequest(
-                            "POST",
-                            `/libraries/${ownerIdentityId}/movies/${movieId}/request`
-                        );
-                        console.log("Processing request sent");
-
-                        // Show status bar and start polling
-                        this.showMovieStatusBar();
-                        this.pollMovieStatus(movie, false);
-                    } catch (requestError) {
-                        console.warn(
-                            "Failed to send processing request:",
-                            requestError
-                        );
-                    }
-
-                    this.showStatus(
-                        "Processing movie, please wait up to 2 minutes"
-                    );
-
-                    // Don't try reprocess until status reaches 40+
-                    this.resetRetryState();
-
-                    // // Wait 5 seconds after request
-                    // await this.delay(5000);
-
-                    return null;
-                }
-
-                this.retryState.attempts++;
-
-                // Determine next action based on current state
-                if (
-                    this.retryState.phase === "initial" &&
-                    this.retryState.attempts >= 5
-                ) {
-                    this.retryState.phase = "first_retry_cycle";
-                    this.retryState.attempts = 0;
-                    this.showVideoLoading("Still preparing... please wait");
-                    await this.delay(30000); // Wait 0.5 minute
-                } else if (
-                    this.retryState.phase === "first_retry_cycle" &&
-                    this.retryState.attempts >= 5
-                ) {
-                    this.retryState.phase = "failed";
-                    this.stopStatusPolling(); // Stop polling on failure
-                    throw new Error(
-                        "Video processing timed out. Please try again later."
-                    );
-                } else {
-                    // Wait 10 seconds between retries
-                    const waitTime =
-                        this.retryState.phase === "initial" ? 10000 : 10000;
-                    await this.delay(waitTime);
-                }
+                // Show status bar and start polling
+                this.showMovieStatusBar();
+                this.pollMovieStatus(movie, false);
+                this.showStatus(
+                    "Processing movie, please wait up to 2 minutes"
+                );
+            } catch (requestError) {
+                console.warn(
+                    "Failed to send processing request:",
+                    requestError
+                );
+                throw new Error("Failed to start movie processing");
             }
-        }
 
-        throw new Error("Maximum retry attempts exceeded");
+            // Return null - status polling will handle the rest
+            return null;
+        }
     }
 
     async setupHLSPlayer(streamUrl, isRecovery, subtitles = []) {
@@ -1630,11 +1583,6 @@ class MediaLibraryApp {
             this.hls.on(Hls.Events.ERROR, (event, data) => {
                 console.error("HLS error:", data);
                 if (this.isRetryableStreamError(data)) {
-                    // this.hideVideoLoading();
-                    // this.showPlayButton();
-                    // this.showStatus(
-                    //     "Error playing video stream, re-requesting movie"
-                    // );
                     this.isStreamError = true;
                     this.handleStreamError(data);
                 }
@@ -1724,9 +1672,10 @@ class MediaLibraryApp {
 
         // Store current playback position and pause the player
         const video = document.getElementById("video-player");
-        this.recoveryPosition = (video ? video.currentTime : 0) - 5;
-        this.recoveryPosition =
-            this.recoveryPosition < 0 ? 0 : this.recoveryPosition;
+        this.recoveryPosition = Math.max(
+            0,
+            (video ? video.currentTime : 0) - 5
+        );
         console.log("Storing recovery position:", this.recoveryPosition);
 
         // Pause the video during recovery
@@ -1736,9 +1685,11 @@ class MediaLibraryApp {
 
         // Exit fullscreen if active
         if (document.fullscreenElement === video) {
-            document.exitFullscreen().catch((err) => {
-                console.warn("Failed to exit fullscreen:", err);
-            });
+            document
+                .exitFullscreen()
+                .catch((err) =>
+                    console.warn("Failed to exit fullscreen:", err)
+                );
         }
 
         try {
@@ -1756,14 +1707,14 @@ class MediaLibraryApp {
             );
 
             this.showStatus("Stream error occurred. Re-processing movie...");
+            this.showVideoLoading("Re-processing movie...");
 
             // Show status bar and start polling for recovery
             this.showMovieStatusBar();
             this.pollMovieStatus(this.currentMovie, true);
 
-            // Don't try reprocess until status reaches 40+
-            // // Start polling for the new playlist
-            // this.startStreamRecoveryPolling();
+            // Reset retry flag - status polling will handle recovery
+            this.retryState.isRetrying = false;
         } catch (requestError) {
             console.error("Failed to request re-processing:", requestError);
             this.retryState.isRetrying = false;
@@ -1771,66 +1722,6 @@ class MediaLibraryApp {
                 "Stream error occurred. Please try refreshing the page."
             );
         }
-    }
-
-    async startStreamRecoveryPolling() {
-        console.log("Starting stream recovery polling...");
-        this.showVideoLoading("Re-processing movie...");
-
-        const maxAttempts = 20;
-        let attempts = 0;
-        let pollInterval = null;
-
-        // Load subtitles for recovery
-        const subtitles = await this.loadMovieSubtitles(this.currentMovie);
-
-        setTimeout(async () => {
-            pollInterval = setInterval(async () => {
-                attempts++;
-                console.log(
-                    `Recovery polling attempt ${attempts}/${maxAttempts}`
-                );
-
-                try {
-                    // Reload the HLS player with the same playlist URL
-                    await this.setupHLSPlayer(
-                        this.playlistUrl,
-                        true,
-                        subtitles
-                    );
-
-                    // Check if the HLS player successfully loaded
-                    if (this.hls && this.hls.media) {
-                        console.log(
-                            "Stream recovery successful, player reloaded"
-                        );
-                        clearInterval(pollInterval);
-                        this.retryState.isRetrying = false;
-                        this.isStreamError = false;
-                        this.showStatus("Video stream recovered successfully!");
-                        return;
-                    }
-
-                    // If we get here without the media attached, it might still be loading
-                    // Let it continue to the next attempt
-                } catch (error) {
-                    console.log(
-                        `Recovery attempt ${attempts} failed:`,
-                        error.message
-                    );
-                }
-
-                if (attempts >= maxAttempts) {
-                    clearInterval(pollInterval);
-                    this.retryState.isRetrying = false;
-                    this.hideVideoLoading();
-                    this.showPlayButton();
-                    this.showStatus(
-                        "Stream recovery failed. Please try playing again."
-                    );
-                }
-            }, CONFIG.streamRecoveryRetryInterval);
-        }, 1500); //CONFIG.streamRecoveryRetryInterval);
     }
 
     resetRetryState() {
@@ -2212,7 +2103,9 @@ class MediaLibraryApp {
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
-        console.log("Starting status polling for movie:", movieId);
+        console.log(
+            `Starting status polling for movie: ${movieId} (recovery: ${isRecovery})`
+        );
 
         this.statusPollingInterval = setInterval(async () => {
             try {
@@ -2222,22 +2115,26 @@ class MediaLibraryApp {
                 );
 
                 this.lastStatusResponse = statusResponse;
-
                 console.log("Status update:", statusResponse);
                 this.updateMovieStatusBar(statusResponse);
 
+                // Check if streaming is ready (40% progress)
                 if (
                     statusResponse.stageName === "uploading" &&
                     statusResponse.percentage >= 40
                 ) {
-                    if (isRecovery) {
-                        if (this.isStreamError) {
-                            this.startStreamRecoveryPolling();
-                        }
-                    } else {
-                        if (!this.playlistUrl) {
-                            this.onPlayButtonClick();
-                        }
+                    if (isRecovery && this.isStreamError) {
+                        // Handle stream recovery
+                        console.log(
+                            "Stream ready for recovery, reloading player..."
+                        );
+                        await this.recoverStream(movie);
+                    } else if (!this.playlistUrl) {
+                        // Handle initial load
+                        console.log(
+                            "Stream ready for initial load, starting player..."
+                        );
+                        await this.initializeVideoPlayer(movie);
                     }
                 }
 
@@ -2249,29 +2146,59 @@ class MediaLibraryApp {
                     this.stopStatusPolling();
 
                     if (statusResponse.stageName === "completed") {
-                        // Hide status bar after a delay when completed
-                        setTimeout(() => {
-                            this.hideMovieStatusBar();
-                        }, 10000);
+                        // Hide status bar after delay
+                        setTimeout(() => this.hideMovieStatusBar(), 10000);
                     }
                 }
             } catch (error) {
                 console.warn("Failed to get movie status:", error);
 
-                // If we get 404, the status doesn't exist yet or movie finished processing
-                if (error.statusCode === 404) {
-                    // Continue polling for a bit in case status hasn't been created yet
-                    // Status polling will be stopped by retry logic or completion
-                } else if (
-                    error.statusCode === 403 ||
-                    error.statusCode === 401
-                ) {
-                    // Auth issues - stop polling
+                if (error.statusCode === 403 || error.statusCode === 401) {
                     this.stopStatusPolling();
                 }
-                // For other errors, continue polling
+                // Continue polling for other errors (404, 500, etc.)
             }
-        }, 8000); // Poll every 8 seconds
+        }, 8000);
+    }
+
+    async recoverStream(movie) {
+        try {
+            console.log("Recovering stream...");
+            const playlistUrl = await this.getMovieStreamUrl(movie);
+
+            if (playlistUrl) {
+                this.playlistUrl = playlistUrl;
+                const subtitles = await this.loadMovieSubtitles(movie);
+                await this.setupHLSPlayer(this.playlistUrl, true, subtitles);
+
+                // Hide the loading overlay after successful recovery
+                this.hideVideoLoading();
+
+                // Ensure video resumes playing after a brief delay
+                setTimeout(() => {
+                    const video = document.getElementById("video-player");
+                    if (video && video.paused) {
+                        video.play().catch((error) => {
+                            console.warn(
+                                "Failed to resume playback after recovery:",
+                                error
+                            );
+                        });
+                    }
+                }, 500);
+
+                this.isStreamError = false;
+                this.retryState.isRetrying = false;
+                this.showStatus("Video stream recovered successfully!");
+            }
+        } catch (error) {
+            console.error("Stream recovery failed:", error);
+            this.showStatus(
+                "Stream recovery failed. Please try playing again."
+            );
+            this.hideVideoLoading();
+            this.showPlayButton();
+        }
     }
 
     stopStatusPolling() {
