@@ -160,7 +160,7 @@ div.logout-btn {
 }
 
 /* Media query for mobile screens */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 900px) {
     body {
         width: 100%;
         padding: 20px 15px 0 15px;
