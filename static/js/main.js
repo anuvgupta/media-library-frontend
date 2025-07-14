@@ -29,7 +29,6 @@ class MediaLibraryApp {
         };
 
         this.showStatusTimeout = null;
-        this.positionSaveInterval = null;
         this.lastSavedPosition = 0;
         this.positionSaveInterval = 20000;
         this.statusPollingInterval = null;
@@ -1561,7 +1560,10 @@ class MediaLibraryApp {
 
                 setTimeout(() => {
                     if (isRecovery) {
-                        video.currentTime = this.recoveryPosition;
+                        video.currentTime = Math.max(
+                            this.recoveryPosition - 30,
+                            0
+                        );
                         video.play().catch((error) => {
                             console.warn("Recovery autoplay failed:", error);
                         });
@@ -1658,13 +1660,25 @@ class MediaLibraryApp {
                 // Create track element with data URL
                 const track = document.createElement("track");
                 track.kind = "subtitles";
-                track.src = dataUrl; // Use blob URL instead of original URL
+                track.src = dataUrl;
                 track.srclang = subtitle.language;
                 track.label = subtitle.label;
-                track.default = index === 0; // Make first track default
+
+                // Only set default on the first track, and explicitly set mode
+                if (index === 0) {
+                    track.default = true;
+                    // Set mode to 'showing' for the default track
+                    track.addEventListener("load", () => {
+                        track.track.mode = "showing";
+                    });
+                } else {
+                    // Explicitly set other tracks to disabled mode
+                    track.addEventListener("load", () => {
+                        track.track.mode = "disabled";
+                    });
+                }
 
                 video.appendChild(track);
-
                 console.log(`✅ Added subtitle track: ${subtitle.language}`);
             } catch (error) {
                 console.warn(
@@ -1675,8 +1689,32 @@ class MediaLibraryApp {
             }
         }
 
+        // Additional safeguard: After all tracks are loaded, ensure only one is showing
+        video.addEventListener(
+            "loadedmetadata",
+            () => {
+                const textTracks = video.textTracks;
+                let hasShowing = false;
+
+                for (let i = 0; i < textTracks.length; i++) {
+                    const track = textTracks[i];
+                    if (track.kind === "subtitles") {
+                        if (!hasShowing && i === 0) {
+                            // First subtitle track should be showing
+                            track.mode = "showing";
+                            hasShowing = true;
+                        } else {
+                            // All other subtitle tracks should be disabled
+                            track.mode = "disabled";
+                        }
+                    }
+                }
+            },
+            { once: true }
+        );
+
         console.log(
-            `✅ Added ${subtitles.length} subtitle tracks via data URLs`
+            `✅ Added ${subtitles.length} subtitle tracks with proper modes`
         );
     }
 
