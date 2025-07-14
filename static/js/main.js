@@ -2270,7 +2270,7 @@ class MediaLibraryApp {
                     (statusResponse.stageName === "completed" &&
                         statusResponse.percentage >= 40)
                 ) {
-                    if (isRecovery && this.isStreamError) {
+                    if (isRecovery || this.isStreamError) {
                         // Handle stream recovery
                         console.log(
                             "Stream ready for recovery, reloading player..."
