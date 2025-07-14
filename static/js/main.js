@@ -2266,8 +2266,9 @@ class MediaLibraryApp {
 
                 // Check if streaming is ready (40% progress)
                 if (
-                    statusResponse.stageName === "uploading" &&
-                    statusResponse.percentage >= 40
+                    statusResponse.stageName === "uploading" ||
+                    (statusResponse.stageName === "completed" &&
+                        statusResponse.percentage >= 40)
                 ) {
                     if (isRecovery && this.isStreamError) {
                         // Handle stream recovery
@@ -2280,6 +2281,7 @@ class MediaLibraryApp {
                         console.log(
                             "Stream ready for initial load, starting player..."
                         );
+                        this.savePlaybackPosition(movieId, 0);
                         await this.initializeVideoPlayer(movie);
                     }
                 }
