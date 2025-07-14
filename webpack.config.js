@@ -179,6 +179,7 @@ module.exports = {
         hot: true,
         port: 8080,
         open: true,
+        server: "https",
     },
     devtool: IS_DEVELOPMENT ? "eval-source-map" : "source-map", // Better debugging in dev
 };
