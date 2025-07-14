@@ -1874,6 +1874,21 @@ class MediaLibraryApp {
         // Reset retry state
         this.resetRetryState();
         this.playlistUrl = null;
+
+        this.cleanupSubtitleUrls();
+    }
+
+    // Clean up blob URLs when destroying the player
+    cleanupSubtitleUrls() {
+        const video = document.getElementById("video-player");
+        if (video) {
+            const tracks = video.querySelectorAll('track[kind="subtitles"]');
+            tracks.forEach((track) => {
+                if (track.src.startsWith("blob:")) {
+                    URL.revokeObjectURL(track.src);
+                }
+            });
+        }
     }
 
     clearAccountContent() {
