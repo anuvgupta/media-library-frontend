@@ -1623,7 +1623,7 @@ class MediaLibraryApp {
         }
     }
 
-    addSubtitleTracks(subtitles) {
+    async addSubtitleTracks(subtitles) {
         const video = document.getElementById("video-player");
         if (!video || subtitles.length === 0) return;
 
@@ -1633,19 +1633,51 @@ class MediaLibraryApp {
         );
         existingTracks.forEach((track) => track.remove());
 
-        // Add new subtitle tracks
-        subtitles.forEach((subtitle, index) => {
-            const track = document.createElement("track");
-            track.kind = "subtitles";
-            track.src = subtitle.url;
-            track.srclang = subtitle.language;
-            track.label = subtitle.label;
-            track.default = index === 0; // Make first track default
+        // Process subtitles with data URLs
+        for (let index = 0; index < subtitles.length; index++) {
+            const subtitle = subtitles[index];
 
-            video.appendChild(track);
-        });
+            try {
+                console.log(`📥 Fetching subtitle: ${subtitle.language}`);
 
-        console.log(`✅ Added ${subtitles.length} subtitle tracks`);
+                // Fetch the subtitle content
+                const response = await fetch(subtitle.url);
+                if (!response.ok) {
+                    console.warn(
+                        `Failed to fetch subtitle ${subtitle.language}: ${response.status}`
+                    );
+                    continue;
+                }
+
+                const vttContent = await response.text();
+
+                // Create data URL
+                const blob = new Blob([vttContent], { type: "text/vtt" });
+                const dataUrl = URL.createObjectURL(blob);
+
+                // Create track element with data URL
+                const track = document.createElement("track");
+                track.kind = "subtitles";
+                track.src = dataUrl; // Use blob URL instead of original URL
+                track.srclang = subtitle.language;
+                track.label = subtitle.label;
+                track.default = index === 0; // Make first track default
+
+                video.appendChild(track);
+
+                console.log(`✅ Added subtitle track: ${subtitle.language}`);
+            } catch (error) {
+                console.warn(
+                    `Failed to load subtitle ${subtitle.language}:`,
+                    error
+                );
+                // Continue with other subtitles even if one fails
+            }
+        }
+
+        console.log(
+            `✅ Added ${subtitles.length} subtitle tracks via data URLs`
+        );
     }
 
     isRetryableStreamError(errorData) {
