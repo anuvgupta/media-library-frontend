@@ -207,7 +207,20 @@
             <!-- Library Management Section (only shown if user owns the library) -->
             <div id="library-management-section" style="display: none">
                 <h2>Manage</h2>
-                <p>Manage who has access to your library.</p>
+                <p>Manage your library.</p>
+
+                <h3>Index</h3>
+                <p>
+                    Refresh the library index to scan for new movies and update
+                    metadata:
+                </p>
+                <button
+                    id="refresh-index-btn"
+                    onclick="window.mediaLibraryApp.refreshLibraryIndex()"
+                >
+                    Refresh Index
+                </button>
+                <br /><br />
 
                 <h3>Share</h3>
                 <p>
@@ -243,7 +256,22 @@
 
             <!-- Library Viewing Section -->
             <div>
-                <h2>Library</h2>
+                <div
+                    style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 10px;
+                    "
+                >
+                    <h2>Library</h2>
+                    <button
+                        id="refresh-library-btn"
+                        onclick="window.mediaLibraryApp.refreshLibraryContent()"
+                    >
+                        Refresh
+                    </button>
+                </div>
                 <p>Browse the movies and collections in this library.</p>
 
                 <div id="library-content">

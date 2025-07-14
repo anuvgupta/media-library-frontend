@@ -2116,6 +2116,67 @@ class MediaLibraryApp {
         }
     }
 
+    async refreshLibraryIndex() {
+        const button = document.getElementById("refresh-index-btn");
+        const originalText = button.textContent;
+        button.textContent = "Refreshing...";
+        button.disabled = true;
+
+        try {
+            await this.makeAuthenticatedRequest(
+                "POST",
+                `/libraries/${this.currentUser.identityId}/refresh`
+            );
+
+            this.showStatus(
+                "Library refresh started. Reloading in 5 seconds..."
+            );
+
+            // Wait 5 seconds then reload library
+            setTimeout(async () => {
+                await this.loadLibraryData();
+                this.showStatus("Library refreshed successfully!");
+            }, 5000);
+        } catch (error) {
+            console.error("Error refreshing library index:", error);
+
+            if (error.statusCode === 403) {
+                this.showStatus("You can only refresh your own library");
+            } else if (error.statusCode === 404) {
+                this.showStatus("Library not found");
+            } else if (error.statusCode === 401) {
+                this.showStatus("Session expired. Please sign in again.");
+                this.handleLogout();
+            } else {
+                this.showStatus(
+                    "Error refreshing library: " +
+                        (error.message || "Unknown error")
+                );
+            }
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    }
+
+    async refreshLibraryContent() {
+        const button = document.getElementById("refresh-library-btn");
+        const originalText = button.textContent;
+        button.textContent = "Refreshing...";
+        button.disabled = true;
+
+        try {
+            await this.loadLibraryData();
+            this.showStatus("Library content refreshed!");
+        } catch (error) {
+            console.error("Error refreshing library content:", error);
+            this.showStatus("Error refreshing library content");
+        } finally {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    }
+
     getStatusMessage(stageName) {
         const messages = {
             starting: "Processing movie",
