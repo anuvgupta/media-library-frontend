@@ -1522,6 +1522,40 @@ class MediaLibraryApp {
         }
     }
 
+    calculateRecoveryPosition() {
+        try {
+            const video = document.getElementById("video-player");
+            let recoveryPositionFinal = this.recoveryPosition;
+
+            if (video && video.buffered.length > 0) {
+                // Get the end time of the last buffered range
+                const lastBufferedEnd = video.buffered.end(
+                    video.buffered.length - 1
+                );
+
+                // Check if recovery position is within 30 seconds of the buffered end
+                if (Math.abs(this.recoveryPosition - lastBufferedEnd) <= 30) {
+                    // Only subtract 10 seconds if we're close to the buffered end
+                    recoveryPositionFinal = Math.max(
+                        this.recoveryPosition - 10,
+                        0
+                    );
+                }
+            } else {
+                // Fallback: if we can't determine buffered length, use original logic with -10
+                recoveryPositionFinal = Math.max(this.recoveryPosition - 10, 0);
+            }
+
+            return recoveryPositionFinal;
+        } catch (e) {
+            console.warn(
+                "Unexpected error while calculating recovery position"
+            );
+            console.warn(e);
+            return this.recoveryPosition;
+        }
+    }
+
     setupHLSPlayer(streamUrl, isRecovery, subtitles = []) {
         // Destroy existing player if any
         if (this.hls) {
@@ -1529,7 +1563,7 @@ class MediaLibraryApp {
             this.hls = null;
         }
 
-        const recoveryPositionFinal = Math.max(this.recoveryPosition - 30, 0);
+        const recoveryPositionFinal = this.calculateRecoveryPosition();
         const startPosition = isRecovery ? this.recoveryPosition : 0;
 
         const video = document.getElementById("video-player");
