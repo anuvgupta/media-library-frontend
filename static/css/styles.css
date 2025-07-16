@@ -18,7 +18,8 @@
     --status-text: #666;
     --details-text: #888;
     /* --theme-button-bg: #fdfdfd;*/
-    --theme-button-bg: #3596fc;
+    /* --theme-button-bg: #3596fc; */
+    --theme-button-bg: #007bff;
     --theme-icon-color: #fff;
 }
 
