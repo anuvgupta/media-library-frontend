@@ -8,6 +8,7 @@ const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const { minify } = require("terser");
 
 const LOGS_ENABLED = process.env.STAGE === "dev" || false;
 const IS_DEVELOPMENT = process.env.STAGE === "dev";
