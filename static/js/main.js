@@ -1459,7 +1459,7 @@ class MediaLibraryApp {
                 // Load subtitles
                 const subtitles = await this.loadMovieSubtitles(movie);
 
-                await this.setupHLSPlayer(this.playlistUrl, false, subtitles);
+                this.setupHLSPlayer(this.playlistUrl, false, subtitles);
             } else {
                 console.log(
                     "getMovieStreamUrlWithRetry returned empty, will initialize video player later"
@@ -1506,7 +1506,7 @@ class MediaLibraryApp {
 
                 // Show status bar and start polling
                 this.showMovieStatusBar();
-                this.pollMovieStatus(movie, false);
+                this.pollMovieStatus(movie);
                 this.showStatus(
                     "Processing movie, please wait up to 2 minutes"
                 );
@@ -1523,12 +1523,15 @@ class MediaLibraryApp {
         }
     }
 
-    async setupHLSPlayer(streamUrl, isRecovery, subtitles = []) {
+    setupHLSPlayer(streamUrl, isRecovery, subtitles = []) {
         // Destroy existing player if any
         if (this.hls) {
             this.hls.destroy();
             this.hls = null;
         }
+
+        const recoveryPositionFinal = Math.max(this.recoveryPosition - 30, 0);
+        const startPosition = isRecovery ? this.recoveryPosition : 0;
 
         const video = document.getElementById("video-player");
         if (!video) throw new Error("Video element not found");
@@ -1541,9 +1544,9 @@ class MediaLibraryApp {
                 maxBufferLength: 60,
                 startLevel: -1,
                 capLevelToPlayerSize: true,
+                startPosition,
                 // VOD-specific settings:
                 lowLatencyMode: false,
-                startPosition: isRecovery ? this.recoveryPosition : 0,
             });
 
             this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
@@ -1560,10 +1563,7 @@ class MediaLibraryApp {
 
                 setTimeout(() => {
                     if (isRecovery) {
-                        video.currentTime = Math.max(
-                            this.recoveryPosition - 30,
-                            0
-                        );
+                        video.currentTime = recoveryPositionFinal;
                         video.play().catch((error) => {
                             console.warn("Recovery autoplay failed:", error);
                         });
@@ -1781,7 +1781,7 @@ class MediaLibraryApp {
 
             // Show status bar and start polling for recovery
             this.showMovieStatusBar();
-            this.pollMovieStatus(this.currentMovie, true);
+            this.pollMovieStatus(this.currentMovie);
 
             // Reset retry flag - status polling will handle recovery
             this.retryState.isRetrying = false;
@@ -2239,7 +2239,7 @@ class MediaLibraryApp {
         return stages[stageName] || stageName;
     }
 
-    async pollMovieStatus(movie, isRecovery = false) {
+    async pollMovieStatus(movie) {
         if (this.isPollingStatus) {
             console.log("Status polling already active");
             return;
@@ -2270,7 +2270,7 @@ class MediaLibraryApp {
                     (statusResponse.stageName === "completed" &&
                         statusResponse.percentage >= 40)
                 ) {
-                    if (isRecovery || this.isStreamError) {
+                    if (this.isStreamError) {
                         // Handle stream recovery
                         console.log(
                             "Stream ready for recovery, reloading player..."
@@ -2317,7 +2317,7 @@ class MediaLibraryApp {
             if (playlistUrl) {
                 this.playlistUrl = playlistUrl;
                 const subtitles = await this.loadMovieSubtitles(movie);
-                await this.setupHLSPlayer(this.playlistUrl, true, subtitles);
+                this.setupHLSPlayer(this.playlistUrl, true, subtitles);
 
                 // Hide the loading overlay after successful recovery
                 this.hideVideoLoading();
