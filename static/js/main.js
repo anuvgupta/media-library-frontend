@@ -1508,9 +1508,7 @@ class MediaLibraryApp {
                 // Show status bar and start polling
                 this.showMovieStatusBar();
                 this.pollMovieStatus(movie);
-                this.showStatus(
-                    "Processing movie, please wait up to 2 minutes"
-                );
+                this.showStatus("Waiting for movie");
             } catch (requestError) {
                 console.warn(
                     "Failed to send processing request:",
