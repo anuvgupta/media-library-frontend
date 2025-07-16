@@ -7,6 +7,7 @@ import Hls from "hls.js";
 
 import * as themeSystem from "./theme/system.js";
 import { CONFIG } from "./config/config.js";
+import { utf8ToBase64, base64ToUtf8 } from "./util/utils.js";
 
 class MediaLibraryApp {
     constructor() {
@@ -338,7 +339,7 @@ class MediaLibraryApp {
 
             if (accessToken && idToken) {
                 // Validate token (basic check - in production, verify expiration)
-                const payload = JSON.parse(atob(idToken.split(".")[1]));
+                const payload = JSON.parse(base64ToUtf8(idToken.split(".")[1]));
                 const now = Math.floor(Date.now() / 1000);
 
                 if (payload.exp > now) {
@@ -522,7 +523,7 @@ class MediaLibraryApp {
         localStorage.setItem("refreshToken", refreshToken);
 
         // Parse user info from ID token
-        const payload = JSON.parse(atob(idToken.split(".")[1]));
+        const payload = JSON.parse(base64ToUtf8(idToken.split(".")[1]));
         this.currentUser = {
             username: payload["cognito:username"],
             email: payload.email,
@@ -1478,7 +1479,7 @@ class MediaLibraryApp {
     }
 
     getMovieId(movie) {
-        return btoa(this.getMoviePathInLibrary(movie));
+        return utf8ToBase64(this.getMoviePathInLibrary(movie));
     }
 
     async getMovieStreamUrlWithRetry(movie) {
