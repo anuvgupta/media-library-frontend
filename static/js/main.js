@@ -2276,7 +2276,7 @@ class MediaLibraryApp {
                         console.log(
                             "Stream ready for initial load, starting player..."
                         );
-                        this.savePlaybackPosition(movieId, 0);
+                        // this.savePlaybackPosition(movieId, 0);
                         await this.initializeVideoPlayer(movie);
                     }
                 }
