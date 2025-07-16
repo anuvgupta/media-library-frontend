@@ -1719,16 +1719,34 @@ class MediaLibraryApp {
     }
 
     isRetryableStreamError(errorData) {
-        return (
-            // (errorData.fatal) ||
-            (errorData.type === "mediaError" &&
-                (errorData.details === "bufferStalledError" ||
-                    errorData.details === "bufferAppendError")) ||
-            (errorData.type === "networkError" &&
-                errorData.details === "fragLoadError" &&
-                (errorData.response.code === 403 ||
-                    errorData.response.code === 404))
-        );
+        if (errorData.type === "mediaError") {
+            if (errorData.details === "bufferStalledError") {
+                return true;
+            } else if (errorData.details === "bufferAppendError") {
+                return false;
+            }
+        } else if (errorData.type === "networkError") {
+            if (errorData.details === "levelEmptyError") {
+                return true;
+            } else if (errorData.details === "fragLoadError") {
+                if (errorData.response.code === 403) {
+                    return true;
+                } else if (errorData.response.code === 404) {
+                    return true;
+                }
+            }
+        }
+        return false;
+
+        // return (
+        //     // (errorData.fatal) ||
+        //     (errorData.type === "mediaError" &&
+        //         ) ||
+        //     (errorData.type === "networkError" &&
+        //         (errorData.details == "levelEmptyError" ||
+        //             (errorData.details === "fragLoadError" &&
+        //                 )))
+        // );
     }
 
     async handleStreamError(errorData) {
