@@ -1782,9 +1782,6 @@ class MediaLibraryApp {
             // Show status bar and start polling for recovery
             this.showMovieStatusBar();
             this.pollMovieStatus(this.currentMovie);
-
-            // Reset retry flag - status polling will handle recovery
-            this.retryState.isRetrying = false;
         } catch (requestError) {
             console.error("Failed to request re-processing:", requestError);
             this.retryState.isRetrying = false;
@@ -2249,9 +2246,7 @@ class MediaLibraryApp {
         const movieId = this.getMovieId(movie);
         const ownerIdentityId = this.currentLibraryOwner;
 
-        console.log(
-            `Starting status polling for movie: ${movieId} (recovery: ${isRecovery})`
-        );
+        console.log(`Starting status polling for movie: ${movieId}`);
 
         this.statusPollingInterval = setInterval(async () => {
             try {
