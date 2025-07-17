@@ -1066,9 +1066,15 @@ class MediaLibraryApp {
     }
 
     // Helper method for username validation
+    // isValidUsername(username) {
+    //     // Assuming usernames are 3-50 characters, alphanumeric plus underscores
+    //     const usernameRegex = /^[a-zA-Z0-9_]{3,50}$/;
+    //     return usernameRegex.test(username);
+    // }
     isValidUsername(username) {
-        // Assuming usernames are 3-50 characters, alphanumeric plus underscores
-        const usernameRegex = /^[a-zA-Z0-9_]{3,50}$/;
+        // More permissive validation - closer to Cognito's actual rules
+        // Cognito allows most special characters in usernames
+        const usernameRegex = /^[a-zA-Z0-9_.@-]{1,128}$/;
         return usernameRegex.test(username);
     }
 
