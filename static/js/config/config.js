@@ -7,9 +7,20 @@ export const isProd = () => {
         !HOST_NAME.includes("-dev") && window.location.hostname != "localhost"
     );
 };
+export const onAlternateDomain = () => {
+    return window.location.hostname.endsWith("streamy.sh");
+};
 export const getApiBaseUrl = () => {
-    const BASE_API_DOMAIN_DEV = "media-api-dev.anuv.me";
-    const BASE_API_DOMAIN_PROD = "media-api.anuv.me";
+    const BASE_API_DOMAIN_ORIG_DEV = "media-api-dev.anuv.me";
+    const BASE_API_DOMAIN_ORIG_PROD = "media-api.anuv.me";
+    const BASE_API_DOMAIN_ALT_DEV = "api-dev.streamy.sh";
+    const BASE_API_DOMAIN_ALT_PROD = "api.streamy.sh";
+    const BASE_API_DOMAIN_PROD = onAlternateDomain()
+        ? BASE_API_DOMAIN_ALT_PROD
+        : BASE_API_DOMAIN_ORIG_PROD;
+    const BASE_API_DOMAIN_DEV = onAlternateDomain()
+        ? BASE_API_DOMAIN_ALT_DEV
+        : BASE_API_DOMAIN_ORIG_DEV;
     const BASE_API_DOMAIN = isProd()
         ? BASE_API_DOMAIN_PROD
         : BASE_API_DOMAIN_DEV;
