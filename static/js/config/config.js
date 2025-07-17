@@ -4,7 +4,9 @@
 export const isProd = () => {
     const HOST_NAME = `${window.location.hostname}`;
     return (
-        !HOST_NAME.includes("-dev") && window.location.hostname != "localhost"
+        !HOST_NAME.includes("-dev") &&
+        !HOST_NAME.includes("dev.") &&
+        window.location.hostname != "localhost"
     );
 };
 export const onAlternateDomain = () => {
