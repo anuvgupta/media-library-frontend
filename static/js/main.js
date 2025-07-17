@@ -1506,7 +1506,7 @@ class MediaLibraryApp {
             );
 
             // Request processing
-            this.showVideoLoading("Processing movie...");
+            this.showVideoLoading("Waitig for movie...");
 
             try {
                 await this.makeAuthenticatedRequest(
@@ -1892,7 +1892,7 @@ class MediaLibraryApp {
             );
 
             this.showStatus("Stream error occurred. Re-processing movie...");
-            this.showVideoLoading("Re-processing movie...");
+            this.showVideoLoading("Waiting for movie...");
 
             // Show status bar and start polling for recovery
             this.showMovieStatusBar();
