@@ -65,6 +65,10 @@ body {
         color .3s ease;
 }
 
+h2.movie-title {
+    padding-left: 5px;
+}
+
 .section-spacer {
     margin-bottom: 20px;
     height: 1px;
