@@ -1184,9 +1184,13 @@ class MediaLibraryApp {
     async loadMovieMetadata(movie) {
         try {
             const queryParams = new URLSearchParams();
+
             if (movie.name) {
-                queryParams.append("query", movie.name);
+                // Clean the movie title before searching
+                const cleanedTitle = this.cleanMovieTitleForSearch(movie.name);
+                queryParams.append("query", cleanedTitle);
             }
+
             if (movie.year) {
                 queryParams.append("year", movie.year);
             }
@@ -2402,6 +2406,52 @@ class MediaLibraryApp {
         }
         this.isPollingStatus = false;
         console.log("Stopped status polling");
+    }
+
+    cleanMovieTitleForSearch(title) {
+        if (!title) return title;
+
+        let cleanedTitle = title;
+
+        // Replace em dashes (–) with regular hyphens (-)
+        cleanedTitle = cleanedTitle.replace(/–/g, "-");
+
+        // Remove problematic strings that interfere with search
+        const problematicStrings = [
+            /\s*[-–]\s*Theatrical\s+Cut\s*/gi,
+            /\s*[-–]\s*Theater\s+Cut\s*/gi,
+            /\s*[-–]\s*Extended\s+Cut\s*/gi,
+            /\s*[-–]\s*Ultimate\s+Cut\s*/gi,
+            /\s*[-–]\s*Final\s+Cut\s*/gi,
+            /\s*[-–]\s*Unrated\s+Cut\s*/gi,
+            /\s*[-–]\s*Uncut\s*/gi,
+            /\s*[-–]\s*Remastered\s*/gi,
+            /\s*[-–]\s*Special\s+Edition\s*/gi,
+            /\s*[-–]\s*Anniversary\s+Edition\s*/gi,
+            /\s*[-–]\s*Collector's\s+Edition\s*/gi,
+            /\s*[-–]\s*Limited\s+Edition\s*/gi,
+            /\s*[-–]\s*Criterion\s+Collection\s*/gi,
+            /\s*\(.*?Cut\)\s*/gi, // Remove parenthetical cuts like "(Director's Cut)"
+            /\s*\(.*?Edition\)\s*/gi, // Remove parenthetical editions
+            /\s*\(Remastered\)\s*/gi,
+            /\s*\(Unrated\)\s*/gi,
+            /\s*\(Uncut\)\s*/gi,
+        ];
+
+        // Apply all cleanup rules
+        problematicStrings.forEach((pattern) => {
+            cleanedTitle = cleanedTitle.replace(pattern, "");
+        });
+
+        // Clean up extra whitespace and trim
+        cleanedTitle = cleanedTitle.replace(/\s+/g, " ").trim();
+
+        // Remove trailing punctuation that might interfere
+        cleanedTitle = cleanedTitle.replace(/[,;:.!?]+$/, "");
+
+        console.log(`Title cleanup: "${title}" → "${cleanedTitle}"`);
+
+        return cleanedTitle;
     }
 }
 
