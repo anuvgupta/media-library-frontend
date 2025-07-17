@@ -1672,6 +1672,27 @@ class MediaLibraryApp {
         );
         existingTracks.forEach((track) => track.remove());
 
+        // Find English subtitle index - look for various English language codes
+        const englishLanguageCodes = ["eng", "en", "english"];
+        let englishIndex = -1;
+
+        for (let i = 0; i < subtitles.length; i++) {
+            const subtitle = subtitles[i];
+            const language = subtitle.language.toLowerCase();
+            const label = subtitle.label.toLowerCase();
+
+            if (
+                englishLanguageCodes.includes(language) ||
+                englishLanguageCodes.includes(label) ||
+                label.includes("english")
+            ) {
+                englishIndex = i;
+                break; // Use the first English subtitle found
+            }
+        }
+
+        console.log(`Found English subtitle at index: ${englishIndex}`);
+
         // Process subtitles with data URLs
         for (let index = 0; index < subtitles.length; index++) {
             const subtitle = subtitles[index];
@@ -1701,13 +1722,19 @@ class MediaLibraryApp {
                 track.srclang = subtitle.language;
                 track.label = subtitle.label;
 
-                // Only set default on the first track, and explicitly set mode
-                if (index === 0) {
+                // Set default based on English preference
+                const isDefaultTrack =
+                    englishIndex !== -1 ? index === englishIndex : index === 0;
+
+                if (isDefaultTrack) {
                     track.default = true;
                     // Set mode to 'showing' for the default track
                     track.addEventListener("load", () => {
                         track.track.mode = "showing";
                     });
+                    console.log(
+                        `✅ Set as default: ${subtitle.language} (${subtitle.label})`
+                    );
                 } else {
                     // Explicitly set other tracks to disabled mode
                     track.addEventListener("load", () => {
@@ -1726,23 +1753,45 @@ class MediaLibraryApp {
             }
         }
 
-        // Additional safeguard: After all tracks are loaded, ensure only one is showing
+        // Additional safeguard: After all tracks are loaded, ensure correct default
         video.addEventListener(
             "loadedmetadata",
             () => {
                 const textTracks = video.textTracks;
                 let hasShowing = false;
 
+                // First pass: disable all tracks
                 for (let i = 0; i < textTracks.length; i++) {
                     const track = textTracks[i];
                     if (track.kind === "subtitles") {
-                        if (!hasShowing && i === 0) {
-                            // First subtitle track should be showing
+                        track.mode = "disabled";
+                    }
+                }
+
+                // Second pass: enable the preferred track
+                for (let i = 0; i < textTracks.length; i++) {
+                    const track = textTracks[i];
+                    if (track.kind === "subtitles") {
+                        const trackLanguage = track.language.toLowerCase();
+                        const trackLabel = track.label.toLowerCase();
+
+                        // Check if this is an English track
+                        const isEnglish =
+                            englishLanguageCodes.includes(trackLanguage) ||
+                            englishLanguageCodes.includes(trackLabel) ||
+                            trackLabel.includes("english");
+
+                        if (
+                            !hasShowing &&
+                            ((englishIndex !== -1 && isEnglish) ||
+                                (englishIndex === -1 && i === 0))
+                        ) {
                             track.mode = "showing";
                             hasShowing = true;
-                        } else {
-                            // All other subtitle tracks should be disabled
-                            track.mode = "disabled";
+                            console.log(
+                                `✅ Enabled subtitle track: ${track.language} (${track.label})`
+                            );
+                            break;
                         }
                     }
                 }
@@ -1750,8 +1799,13 @@ class MediaLibraryApp {
             { once: true }
         );
 
+        const enabledSubtitle =
+            englishIndex !== -1
+                ? `English (${subtitles[englishIndex].label})`
+                : `${subtitles[0].label} (first available)`;
+
         console.log(
-            `✅ Added ${subtitles.length} subtitle tracks with proper modes`
+            `✅ Added ${subtitles.length} subtitle tracks with ${enabledSubtitle} enabled by default`
         );
     }
 
