@@ -1506,7 +1506,7 @@ class MediaLibraryApp {
             );
 
             // Request processing
-            this.showVideoLoading("Waitig for movie...");
+            this.showVideoLoading("Waiting for movie...");
 
             try {
                 await this.makeAuthenticatedRequest(
