@@ -2019,7 +2019,9 @@ class MediaLibraryApp {
         ["l", "m"].forEach((param) => url.searchParams.delete(param));
 
         if (params.libraryOwner) {
-            url.searchParams.set("l", params.libraryOwner);
+            // Encode libraryOwner (identity ID) as base64
+            const encodedLibraryOwner = utf8ToBase64(params.libraryOwner);
+            url.searchParams.set("l", encodedLibraryOwner);
         }
         if (params.movieId) {
             url.searchParams.set("m", params.movieId);
@@ -2030,9 +2032,24 @@ class MediaLibraryApp {
 
     parseUrl() {
         const params = new URLSearchParams(window.location.search);
+
+        let libraryOwner = params.get("l");
+        // Decode libraryOwner from base64 if it exists
+        if (libraryOwner) {
+            try {
+                libraryOwner = base64ToUtf8(libraryOwner);
+            } catch (error) {
+                console.warn(
+                    "Failed to decode libraryOwner from base64:",
+                    error
+                );
+                // Fall back to using the raw value if decoding fails
+            }
+        }
+
         return {
             page: params.get("p"),
-            libraryOwner: params.get("l"),
+            libraryOwner: libraryOwner,
             movieId: params.get("m"),
         };
     }
