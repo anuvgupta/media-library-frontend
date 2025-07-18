@@ -473,3 +473,28 @@ div.logout-btn {
         padding: 20px 15px 0 15px;
     }
 }
+
+#movie-search-input {
+    border: 1px solid #e2e2e2;
+    transition: all 0.3s;
+}
+
+#movie-search-input:focus {
+    outline: 1px solid #007bff;
+}
+
+#movie-search-input:focus-visible {
+    outline: 1px solid #007bff;
+}
+
+[data-theme="dark"] #movie-search-input {
+    border: 1px solid #444;
+}
+
+[data-theme="dark"] #movie-search-input:focus {
+    outline: 1px solid #007bff;
+}
+
+[data-theme="dark"] #movie-search-input:focus-visible {
+    outline: 1px solid #007bff;
+}

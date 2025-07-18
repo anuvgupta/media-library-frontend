@@ -10,7 +10,8 @@ export const isProd = () => {
     );
 };
 export const onAlternateDomain = () => {
-    return window.location.hostname.endsWith("streamy.sh");
+    const BASE_DOMAIN_ALT = "streamy.sh";
+    return window.location.hostname.endsWith(BASE_DOMAIN_ALT);
 };
 export const getApiBaseUrl = () => {
     const BASE_API_DOMAIN_ORIG_DEV = "media-api-dev.anuv.me";

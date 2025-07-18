@@ -940,10 +940,14 @@ class MediaLibraryApp {
         // Flatten all movies from all groups into a single array
         const allMovies = [];
         Object.keys(this.currentLibraryData).forEach((collection) => {
-            this.currentLibraryData[collection].forEach((movie) => {
+            const moviesInCollection = this.currentLibraryData[collection];
+            const collectionSize = moviesInCollection.length;
+
+            moviesInCollection.forEach((movie) => {
                 allMovies.push({
                     ...movie,
                     collection,
+                    collectionSize, // Add collection size for display logic
                 });
             });
         });
@@ -962,11 +966,10 @@ class MediaLibraryApp {
                 <input 
                     type="text" 
                     id="movie-search-input" 
-                    placeholder="Search movies by title, year, or quality..." 
+                    placeholder="Search movies by title, year, collection..." 
                     style="
                         width: 100%; 
                         padding: 10px; 
-                        border: 1px solid #ccc; 
                         border-radius: 4px; 
                         font-size: 16px;
                         box-sizing: border-box;
@@ -997,6 +1000,13 @@ class MediaLibraryApp {
                 (movie, index) => `
                 <div class="movie-item">
                     <h4>${movie.name || "Unknown Title"}</h4>
+                    ${
+                        movie.collectionSize > 1
+                            ? `<p>Collection: ${
+                                  movie.collection || "Unknown"
+                              }</p>`
+                            : ""
+                    }
                     <p>Year: ${movie.year || "Unknown"}</p>
                     <p>Runtime: ${movie.runtime || "Unknown"}</p>
                     <p>Quality: ${movie.quality || "Unknown"}</p>
@@ -1022,12 +1032,14 @@ class MediaLibraryApp {
             const year = (movie.year || "").toString().toLowerCase();
             const quality = (movie.quality || "").toLowerCase();
             const runtime = (movie.runtime || "").toLowerCase();
+            const collection = (movie.collection || "").toLowerCase();
 
             return (
                 name.includes(searchLower) ||
                 year.includes(searchLower) ||
                 quality.includes(searchLower) ||
-                runtime.includes(searchLower)
+                runtime.includes(searchLower) ||
+                collection.includes(searchLower)
             );
         });
 
