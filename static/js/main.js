@@ -951,12 +951,51 @@ class MediaLibraryApp {
         // Sort movies alphabetically by name
         allMovies.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
+        // Store all movies for search functionality
+        this.allMoviesForSearch = allMovies;
+
         container.innerHTML = `
-        <h3>Movies (${allMovies.length})</h3>
-        ${allMovies
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>Movies (${allMovies.length})</h3>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <input 
+                    type="text" 
+                    id="movie-search-input" 
+                    placeholder="Search movies by title, year, or quality..." 
+                    style="
+                        width: 100%; 
+                        padding: 10px; 
+                        border: 1px solid #ccc; 
+                        border-radius: 4px; 
+                        font-size: 16px;
+                        box-sizing: border-box;
+                    "
+                />
+            </div>
+            <div id="movies-list">
+                ${this.renderMoviesList(allMovies)}
+            </div>
+        `;
+
+        // Add search functionality
+        const searchInput = document.getElementById("movie-search-input");
+        if (searchInput) {
+            searchInput.addEventListener("input", (e) => {
+                this.filterMovies(e.target.value);
+            });
+        }
+    }
+
+    renderMoviesList(movies) {
+        if (movies.length === 0) {
+            return "<p>No movies match your search.</p>";
+        }
+
+        return movies
             .map(
                 (movie, index) => `
-                <div>
+                <div class="movie-item">
                     <h4>${movie.name || "Unknown Title"}</h4>
                     <p>Year: ${movie.year || "Unknown"}</p>
                     <p>Runtime: ${movie.runtime || "Unknown"}</p>
@@ -971,8 +1010,44 @@ class MediaLibraryApp {
                 </div>
             `
             )
-            .join("")}
-    `;
+            .join("");
+    }
+
+    filterMovies(searchTerm) {
+        if (!this.allMoviesForSearch) return;
+
+        const filteredMovies = this.allMoviesForSearch.filter((movie) => {
+            const searchLower = searchTerm.toLowerCase();
+            const name = (movie.name || "").toLowerCase();
+            const year = (movie.year || "").toString().toLowerCase();
+            const quality = (movie.quality || "").toLowerCase();
+            const runtime = (movie.runtime || "").toLowerCase();
+
+            return (
+                name.includes(searchLower) ||
+                year.includes(searchLower) ||
+                quality.includes(searchLower) ||
+                runtime.includes(searchLower)
+            );
+        });
+
+        // Update the movies count in the header
+        const moviesHeader = document.querySelector("#library-content h3");
+        if (moviesHeader) {
+            const totalCount = this.allMoviesForSearch.length;
+            const filteredCount = filteredMovies.length;
+            if (searchTerm.trim()) {
+                moviesHeader.textContent = `Movies (${filteredCount} of ${totalCount})`;
+            } else {
+                moviesHeader.textContent = `Movies (${totalCount})`;
+            }
+        }
+
+        // Update the movies list
+        const moviesList = document.getElementById("movies-list");
+        if (moviesList) {
+            moviesList.innerHTML = this.renderMoviesList(filteredMovies);
+        }
     }
 
     async shareLibrary() {
