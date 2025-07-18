@@ -995,32 +995,124 @@ class MediaLibraryApp {
             return "<p>No movies match your search.</p>";
         }
 
-        return movies
-            .map(
-                (movie, index) => `
-                <div class="movie-item">
-                    <h4>${movie.name || "Unknown Title"}</h4>
-                    ${
-                        movie.collectionSize > 1
-                            ? `<p>Collection: ${
-                                  movie.collection || "Unknown"
-                              }</p>`
-                            : ""
+        return `<div class="movies-grid">${movies
+            .map((movie, index) => {
+                const posterUrl =
+                    movie.posterUrl ||
+                    `${CONFIG.tmdbPosterUrlPrefix300}${
+                        movie.poster_path || ""
+                    }`;
+
+                return `
+                    <div class="movie-card">
+                        <div class="movie-poster">
+                            ${
+                                posterUrl
+                                    ? `<img src="${posterUrl}" alt="${
+                                          movie.name || "Movie Poster"
+                                      }" onerror="this.style.display='none'">`
+                                    : `<div style="width: 100%; height: 100%; background: var(--progress-bg); display: flex; align-items: center; justify-content: center; color: var(--status-text);">No Poster</div>`
+                            }
+                        </div>
+                        <div class="movie-info">
+                            <div class="movie-title">${
+                                movie.name || "Unknown Title"
+                            }</div>
+                            <div class="movie-details">
+                                ${
+                                    movie.collectionSize > 1
+                                        ? `<p><strong>Collection:</strong> ${
+                                              movie.collection || "Unknown"
+                                          }</p>`
+                                        : ""
+                                }
+                                <p><strong>Year:</strong> ${
+                                    movie.year || "Unknown"
+                                }</p>
+                                <p><strong>Runtime:</strong> ${
+                                    movie.runtime || "Unknown"
+                                }</p>
+                                <p><strong>Quality:</strong> ${
+                                    movie.quality || "Unknown"
+                                }</p>
+                            </div>
+                            <button class="movie-button" onclick="window.mediaLibraryApp.showMovieView(${JSON.stringify(
+                                movie
+                            ).replace(/"/g, "&quot;")})">
+                                Play Movie
+                            </button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("")}</div>`;
+    }
+
+    async loadMoviePosters() {
+        if (!this.allMoviesForSearch) return;
+
+        // Load metadata for movies that don't have posterPath yet
+        const moviesNeedingPosters = this.allMoviesForSearch.filter(
+            (movie) => !movie.posterPath
+        );
+
+        if (moviesNeedingPosters.length === 0) return;
+
+        console.log(
+            `Loading posters for ${moviesNeedingPosters.length} movies`
+        );
+
+        // Process movies in batches to avoid overwhelming the API
+        const batchSize = 5;
+        for (let i = 0; i < moviesNeedingPosters.length; i += batchSize) {
+            const batch = moviesNeedingPosters.slice(i, i + batchSize);
+
+            await Promise.all(
+                batch.map(async (movie) => {
+                    try {
+                        const queryParams = new URLSearchParams();
+                        if (movie.name) {
+                            const cleanedTitle = this.cleanMovieTitleForSearch(
+                                movie.name
+                            );
+                            queryParams.append("query", cleanedTitle);
+                        }
+                        if (movie.year) {
+                            queryParams.append("year", movie.year);
+                        }
+
+                        const response = await fetch(
+                            `${
+                                CONFIG.apiEndpoint
+                            }/metadata?${queryParams.toString()}`
+                        );
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.results && result.results.length > 0) {
+                                movie.posterPath =
+                                    result.results[0].poster_path;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn(
+                            `Failed to load poster for ${movie.name}:`,
+                            error
+                        );
                     }
-                    <p>Year: ${movie.year || "Unknown"}</p>
-                    <p>Runtime: ${movie.runtime || "Unknown"}</p>
-                    <p>Quality: ${movie.quality || "Unknown"}</p>
-                    <button onclick="window.mediaLibraryApp.showMovieView(${JSON.stringify(
-                        movie
-                    ).replace(/"/g, "&quot;")})">
-                        Play Movie
-                    </button>
-                    <div class="section-spacer"></div>
-                    <hr>
-                </div>
-            `
-            )
-            .join("");
+                })
+            );
+
+            // Small delay between batches to be respectful to the API
+            if (i + batchSize < moviesNeedingPosters.length) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+        }
+
+        // Re-render the movies list with the new poster data
+        this.filterMovies(
+            document.getElementById("movie-search-input")?.value || ""
+        );
     }
 
     filterMovies(searchTerm) {
