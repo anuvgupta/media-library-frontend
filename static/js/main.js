@@ -990,6 +990,45 @@ class MediaLibraryApp {
         }
     }
 
+    getMoviePosterUrls(movie) {
+        // First try CDN poster
+        const movieId = this.getMovieId(movie);
+        const cdnPosterUrl = `/poster/${this.currentLibraryOwner}/poster_${movieId}.jpg`;
+
+        // Fallback to TMDB if available
+        const tmdbPosterUrl = movie.poster_path
+            ? `${CONFIG.tmdbPosterUrlPrefix300}${movie.poster_path}`
+            : null;
+
+        return { cdnPosterUrl, tmdbPosterUrl };
+    }
+
+    renderMoviePosterWithFallback(posterUrls, movieName) {
+        const { cdnPosterUrl, tmdbPosterUrl } = posterUrls;
+
+        if (cdnPosterUrl) {
+            // Try CDN first, fallback to TMDB, then no poster
+            if (tmdbPosterUrl) {
+                return `<img src="${cdnPosterUrl}" alt="${
+                    movieName || "Movie Poster"
+                }" 
+                            onerror="this.src='${tmdbPosterUrl}'; this.onerror=function(){this.style.display='none';}">`;
+            } else {
+                return `<img src="${cdnPosterUrl}" alt="${
+                    movieName || "Movie Poster"
+                }" 
+                            onerror="this.style.display='none'">`;
+            }
+        } else if (tmdbPosterUrl) {
+            return `<img src="${tmdbPosterUrl}" alt="${
+                movieName || "Movie Poster"
+            }" 
+                        onerror="this.style.display='none'">`;
+        } else {
+            return `<div style="width: 100%; height: 100%; background: var(--progress-bg); display: flex; align-items: center; justify-content: center; color: var(--status-text);">No Poster</div>`;
+        }
+    }
+
     renderMoviesList(movies) {
         if (movies.length === 0) {
             return "<p>No movies match your search.</p>";
@@ -997,35 +1036,21 @@ class MediaLibraryApp {
 
         return `<div class="movies-grid">${movies
             .map((movie, index) => {
-                const posterUrl =
-                    movie.posterUrl ||
-                    `${CONFIG.tmdbPosterUrlPrefix300}${
-                        movie.poster_path || ""
-                    }`;
+                const posterUrls = this.getMoviePosterUrls(movie);
 
                 return `
                     <div class="movie-card">
                         <div class="movie-poster">
-                            ${
-                                posterUrl
-                                    ? `<img src="${posterUrl}" alt="${
-                                          movie.name || "Movie Poster"
-                                      }" onerror="this.style.display='none'">`
-                                    : `<div style="width: 100%; height: 100%; background: var(--progress-bg); display: flex; align-items: center; justify-content: center; color: var(--status-text);">No Poster</div>`
-                            }
+                            ${this.renderMoviePosterWithFallback(
+                                posterUrls,
+                                movie.name
+                            )}
                         </div>
                         <div class="movie-info">
                             <div class="movie-title">${
                                 movie.name || "Unknown Title"
                             }</div>
                             <div class="movie-details">
-                                ${
-                                    movie.collectionSize > 1
-                                        ? `<p><strong>Collection:</strong> ${
-                                              movie.collection || "Unknown"
-                                          }</p>`
-                                        : ""
-                                }
                                 <p><strong>Year:</strong> ${
                                     movie.year || "Unknown"
                                 }</p>
@@ -1035,6 +1060,13 @@ class MediaLibraryApp {
                                 <p><strong>Quality:</strong> ${
                                     movie.quality || "Unknown"
                                 }</p>
+                                ${
+                                    movie.collectionSize > 1
+                                        ? `<p><strong>Collection:</strong> ${
+                                              movie.collection || "Unknown"
+                                          }</p>`
+                                        : ""
+                                }
                             </div>
                             <button class="movie-button" onclick="window.mediaLibraryApp.showMovieView(${JSON.stringify(
                                 movie
