@@ -1912,7 +1912,11 @@ class MediaLibraryApp {
         await this.loadSubtitleTracks(subtitles);
     }
 
-    async loadSubtitleTracks(subtitles, applyOffset = false) {
+    async loadSubtitleTracks(
+        subtitles,
+        applyOffset = false,
+        selectedTrackIndex = -1
+    ) {
         const video = document.getElementById("video-player");
 
         // Remove existing tracks if reloading
@@ -1950,6 +1954,19 @@ class MediaLibraryApp {
         // Update subtitle track selector
         this.updateSubtitleTrackSelector(subtitles, englishIndex);
 
+        // Determine which track should be active
+        let targetActiveTrack = -1;
+        if (applyOffset && selectedTrackIndex >= 0) {
+            // When applying offset, use the selected track
+            targetActiveTrack = selectedTrackIndex;
+        } else if (!applyOffset) {
+            // For initial load, use English or first track
+            targetActiveTrack = englishIndex !== -1 ? englishIndex : 0;
+        }
+
+        let loadedTracks = 0;
+        const totalTracks = subtitles.length;
+
         // Process subtitles with offset
         for (let index = 0; index < subtitles.length; index++) {
             const subtitle = subtitles[index];
@@ -1984,19 +2001,34 @@ class MediaLibraryApp {
                 track.label = subtitle.label;
                 track.setAttribute("data-index", index);
 
-                // Set default track
-                const isDefaultTrack =
-                    englishIndex !== -1 ? index === englishIndex : index === 0;
+                // Handle track loading and activation
+                track.addEventListener("load", () => {
+                    loadedTracks++;
 
-                if (isDefaultTrack && !applyOffset) {
-                    track.default = true;
-                    track.addEventListener("load", () => {
+                    // Set track mode based on whether it should be active
+                    if (index === targetActiveTrack) {
                         track.track.mode = "showing";
-                    });
-                } else {
-                    track.addEventListener("load", () => {
+                        console.log(
+                            `✅ Activated subtitle track: ${subtitle.language}`
+                        );
+                    } else {
                         track.track.mode = "disabled";
-                    });
+                    }
+
+                    // Update track selector when all tracks are loaded
+                    if (loadedTracks === totalTracks && applyOffset) {
+                        const trackSelect = document.getElementById(
+                            "subtitle-track-select"
+                        );
+                        if (trackSelect && selectedTrackIndex >= 0) {
+                            trackSelect.value = selectedTrackIndex.toString();
+                        }
+                    }
+                });
+
+                // Set default only for initial load
+                if (!applyOffset && index === targetActiveTrack) {
+                    track.default = true;
                 }
 
                 video.appendChild(track);
@@ -2109,13 +2141,12 @@ class MediaLibraryApp {
                     offset.toString()
                 );
 
-                // Reload subtitles with offset
-                this.loadSubtitleTracks(this.currentSubtitles, true);
-
-                // Re-enable the selected track
-                setTimeout(() => {
-                    this.setActiveSubtitleTrack(selectedTrack);
-                }, 100);
+                // Reload subtitles with offset, passing the selected track index
+                this.loadSubtitleTracks(
+                    this.currentSubtitles,
+                    true,
+                    selectedTrack
+                );
 
                 this.showStatus(`Applied ${offset}s offset to subtitles`);
             } else {
@@ -2132,11 +2163,12 @@ class MediaLibraryApp {
                 this.subtitleOffsets[selectedTrack] = 0;
                 localStorage.removeItem(`subtitleOffset_${movieId}`);
 
-                this.loadSubtitleTracks(this.currentSubtitles, true);
-
-                setTimeout(() => {
-                    this.setActiveSubtitleTrack(selectedTrack);
-                }, 100);
+                // Reload subtitles with reset offset, passing the selected track index
+                this.loadSubtitleTracks(
+                    this.currentSubtitles,
+                    true,
+                    selectedTrack
+                );
 
                 this.showStatus("Reset subtitle timing");
             }
