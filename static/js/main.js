@@ -2027,6 +2027,7 @@ class MediaLibraryApp {
         const trackSelect = document.getElementById("subtitle-track-select");
 
         // Load saved offset for this movie
+        const movieId = this.getMovieId(this.currentMovie);
         const defaultTrack = this.selectedSubtitleTrack;
         const savedOffset = localStorage.getItem(
             `subtitleOffset_${movieId}_${defaultTrack}`
