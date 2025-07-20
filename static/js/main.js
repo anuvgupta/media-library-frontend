@@ -2136,7 +2136,9 @@ class MediaLibraryApp {
         subtitles.forEach((subtitle, index) => {
             const option = document.createElement("option");
             option.value = index.toString();
-            option.textContent = `${subtitle.label} (${subtitle.language})`;
+            option.textContent = `${index + 1} ${subtitle.label} (${
+                subtitle.language
+            })`;
             trackSelect.appendChild(option);
         });
     }

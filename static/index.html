@@ -457,7 +457,13 @@
                     style="margin-bottom: 20px; display: none"
                     id="subtitle-controls"
                 >
-                    <h4>Subtitle Settings</h4>
+                    <h4>Subtitles</h4>
+                    <div class="subtitle-control-row">
+                        <label for="subtitle-track-select">Track:</label>
+                        <select id="subtitle-track-select">
+                            <option value="-1">No Subtitles</option>
+                        </select>
+                    </div>
                     <div class="subtitle-control-row">
                         <label for="subtitle-offset">Timing Offset:</label>
                         <input
@@ -471,12 +477,6 @@
                         <span>seconds</span>
                         <button id="apply-subtitle-offset">Apply</button>
                         <button id="reset-subtitle-offset">Reset</button>
-                    </div>
-                    <div class="subtitle-control-row">
-                        <label for="subtitle-track-select">Track:</label>
-                        <select id="subtitle-track-select">
-                            <option value="-1">No Subtitles</option>
-                        </select>
                     </div>
                 </div>
 
