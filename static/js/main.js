@@ -1811,7 +1811,7 @@ class MediaLibraryApp {
                 this.updateQualitySelector(data.levels);
 
                 // Add subtitle tracks
-                await this.addSubtitleTracks(subtitles);
+                this.addSubtitleTracks(subtitles);
 
                 // Reset retry state after successful manifest parsing
                 this.resetRetryState();
