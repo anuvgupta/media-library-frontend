@@ -1932,146 +1932,163 @@ class MediaLibraryApp {
             });
         }
 
-        // Find English subtitle index
-        const englishLanguageCodes = ["eng", "en", "english"];
+        // Find English subtitle index (only for initial load)
         let englishIndex = -1;
+        if (!applyOffset) {
+            const englishLanguageCodes = ["eng", "en", "english"];
+            for (let i = 0; i < subtitles.length; i++) {
+                const subtitle = subtitles[i];
+                const language = subtitle.language.toLowerCase();
+                const label = subtitle.label.toLowerCase();
 
-        for (let i = 0; i < subtitles.length; i++) {
-            const subtitle = subtitles[i];
-            const language = subtitle.language.toLowerCase();
-            const label = subtitle.label.toLowerCase();
-
-            if (
-                englishLanguageCodes.includes(language) ||
-                englishLanguageCodes.includes(label) ||
-                label.includes("english")
-            ) {
-                englishIndex = i;
-                break;
+                if (
+                    englishLanguageCodes.includes(language) ||
+                    englishLanguageCodes.includes(label) ||
+                    label.includes("english")
+                ) {
+                    englishIndex = i;
+                    break;
+                }
             }
         }
-
-        // Update subtitle track selector
-        this.updateSubtitleTrackSelector(subtitles, englishIndex);
 
         // Determine which track should be active
         let targetActiveTrack = -1;
         if (applyOffset && selectedTrackIndex >= 0) {
             // When applying offset, use the selected track
             targetActiveTrack = selectedTrackIndex;
+            // Update dropdown to show the selected track (not English)
+            this.updateSubtitleTrackSelector(subtitles, selectedTrackIndex);
         } else if (!applyOffset) {
             // For initial load, use English or first track
             targetActiveTrack = englishIndex !== -1 ? englishIndex : 0;
+            this.updateSubtitleTrackSelector(subtitles, englishIndex);
         }
 
-        // Track loading completion
-        let loadedTracks = 0;
-        const totalTracks = subtitles.length;
+        // Use a more robust loading mechanism
+        const trackLoadPromises = [];
 
-        // Create a promise that resolves when all tracks are loaded
-        const allTracksLoaded = new Promise((resolve) => {
-            if (totalTracks === 0) {
-                resolve();
+        // Process subtitles with offset
+        for (let index = 0; index < subtitles.length; index++) {
+            const subtitle = subtitles[index];
+
+            const trackPromise = this.createSubtitleTrack(
+                subtitle,
+                index,
+                applyOffset,
+                targetActiveTrack
+            );
+            trackLoadPromises.push(trackPromise);
+        }
+
+        try {
+            // Wait for all tracks to be created and added
+            await Promise.allSettled(trackLoadPromises);
+
+            // Small delay to ensure all tracks are processed by the browser
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            // Activate the target track
+            if (targetActiveTrack >= 0) {
+                this.setActiveSubtitleTrack(targetActiveTrack);
+
+                // Update dropdown to reflect the active track
+                const trackSelect = document.getElementById(
+                    "subtitle-track-select"
+                );
+                if (trackSelect && applyOffset) {
+                    trackSelect.value = targetActiveTrack.toString();
+                    console.log(
+                        `🔧 Updated dropdown to track ${targetActiveTrack}`
+                    );
+                }
+
+                console.log(
+                    `✅ Activated subtitle track: ${targetActiveTrack}`
+                );
+            }
+
+            console.log(
+                `🎯 Subtitle loading complete. Total tracks: ${subtitles.length}, Active: ${targetActiveTrack}`
+            );
+        } catch (error) {
+            console.error("Error loading subtitle tracks:", error);
+            throw error;
+        }
+    }
+
+    async createSubtitleTrack(subtitle, index, applyOffset, targetActiveTrack) {
+        const video = document.getElementById("video-player");
+
+        try {
+            console.log(`📥 Loading subtitle: ${subtitle.language}`);
+
+            const response = await fetch(subtitle.url);
+            if (!response.ok) {
+                console.warn(
+                    `Failed to fetch subtitle ${subtitle.language}: ${response.status}`
+                );
                 return;
             }
 
-            const checkAllLoaded = () => {
-                loadedTracks++;
-                if (loadedTracks === totalTracks) {
-                    // All tracks loaded - now activate the target track using the stable method
-                    setTimeout(() => {
-                        if (targetActiveTrack >= 0) {
-                            this.setActiveSubtitleTrack(targetActiveTrack);
+            let vttContent = await response.text();
 
-                            // Update dropdown to reflect the active track
-                            const trackSelect = document.getElementById(
-                                "subtitle-track-select"
-                            );
-                            if (trackSelect) {
-                                trackSelect.value =
-                                    targetActiveTrack.toString();
-                            }
-
-                            console.log(
-                                `✅ Activated subtitle track after loading: ${targetActiveTrack}`
-                            );
-                        }
-                        resolve();
-                    }, 50); // Small delay to ensure browser state is stable
-                }
-            };
-
-            // Process subtitles with offset
-            for (let index = 0; index < subtitles.length; index++) {
-                const subtitle = subtitles[index];
-
-                (async () => {
-                    try {
-                        console.log(
-                            `📥 Loading subtitle: ${subtitle.language}`
-                        );
-
-                        const response = await fetch(subtitle.url);
-                        if (!response.ok) {
-                            console.warn(
-                                `Failed to fetch subtitle ${subtitle.language}: ${response.status}`
-                            );
-                            checkAllLoaded(); // Still count as "loaded" to avoid hanging
-                            return;
-                        }
-
-                        let vttContent = await response.text();
-
-                        // Apply offset if specified
-                        const offset = this.subtitleOffsets[index] || 0;
-                        if (offset !== 0) {
-                            vttContent = this.applySubtitleOffset(
-                                vttContent,
-                                offset
-                            );
-                        }
-
-                        // Create track with processed content
-                        const blob = new Blob([vttContent], {
-                            type: "text/vtt",
-                        });
-                        const dataUrl = URL.createObjectURL(blob);
-
-                        const track = document.createElement("track");
-                        track.kind = "subtitles";
-                        track.src = dataUrl;
-                        track.srclang = subtitle.language;
-                        track.label = subtitle.label;
-                        track.setAttribute("data-index", index);
-
-                        // DON'T set track modes here - let the stable method handle it
-                        track.addEventListener("load", () => {
-                            // Just mark as loaded, don't try to set modes during load
-                            track.track.mode = "disabled"; // Ensure all start disabled
-                            checkAllLoaded();
-                        });
-
-                        // Set default only for initial load (not when applying offset)
-                        if (!applyOffset && index === targetActiveTrack) {
-                            track.default = true;
-                        }
-
-                        video.appendChild(track);
-                        console.log(
-                            `✅ Added subtitle track: ${subtitle.language}`
-                        );
-                    } catch (error) {
-                        console.warn(
-                            `Failed to load subtitle ${subtitle.language}:`,
-                            error
-                        );
-                        checkAllLoaded(); // Still count as "loaded" to avoid hanging
-                    }
-                })();
+            // Apply offset if specified
+            const offset = this.subtitleOffsets[index] || 0;
+            if (offset !== 0) {
+                vttContent = this.applySubtitleOffset(vttContent, offset);
             }
-        });
 
-        return allTracksLoaded;
+            // Create track with processed content
+            const blob = new Blob([vttContent], { type: "text/vtt" });
+            const dataUrl = URL.createObjectURL(blob);
+
+            const track = document.createElement("track");
+            track.kind = "subtitles";
+            track.src = dataUrl;
+            track.srclang = subtitle.language;
+            track.label = subtitle.label;
+            track.setAttribute("data-index", index);
+
+            // Set default only for initial load (not when applying offset)
+            if (!applyOffset && index === targetActiveTrack) {
+                track.default = true;
+            }
+
+            // Add track to video
+            video.appendChild(track);
+
+            // Return a promise that resolves when the track is ready
+            return new Promise((resolve) => {
+                const handleLoad = () => {
+                    track.track.mode = "disabled"; // Start disabled
+                    console.log(
+                        `✅ Added subtitle track: ${subtitle.language}`
+                    );
+                    resolve();
+                };
+
+                const handleError = () => {
+                    console.warn(
+                        `Failed to load subtitle track: ${subtitle.language}`
+                    );
+                    resolve(); // Still resolve to not block other tracks
+                };
+
+                track.addEventListener("load", handleLoad, { once: true });
+                track.addEventListener("error", handleError, { once: true });
+
+                // Fallback timeout in case events don't fire
+                setTimeout(() => {
+                    handleLoad();
+                }, 5000);
+            });
+        } catch (error) {
+            console.warn(
+                `Failed to create subtitle ${subtitle.language}:`,
+                error
+            );
+        }
     }
 
     applySubtitleOffset(vttContent, offsetSeconds) {
@@ -2164,26 +2181,34 @@ class MediaLibraryApp {
             const offset = parseFloat(offsetInput.value) || 0;
             const selectedTrack = parseInt(trackSelect.value);
 
+            console.log(
+                `🎬 Applying offset: ${offset}s to track ${selectedTrack}`
+            );
+
             if (selectedTrack >= 0) {
                 // Disable button during processing
                 applyBtn.disabled = true;
                 applyBtn.textContent = "Applying...";
 
-                this.subtitleOffsets[selectedTrack] = offset;
-
-                // Save offset preference
-                localStorage.setItem(
-                    `subtitleOffset_${movieId}`,
-                    offset.toString()
-                );
-
                 try {
+                    this.subtitleOffsets[selectedTrack] = offset;
+
+                    // Save offset preference
+                    localStorage.setItem(
+                        `subtitleOffset_${movieId}`,
+                        offset.toString()
+                    );
+
+                    console.log(`🔄 Starting subtitle track reload...`);
+
                     // Wait for all tracks to load completely before considering it done
                     await this.loadSubtitleTracks(
                         this.currentSubtitles,
                         true,
                         selectedTrack
                     );
+
+                    console.log(`✅ Subtitle offset applied successfully`);
                     this.showStatus(`Applied ${offset}s offset to subtitles`);
                 } catch (error) {
                     console.error("Failed to apply subtitle offset:", error);
@@ -2192,6 +2217,7 @@ class MediaLibraryApp {
                     // Re-enable button
                     applyBtn.disabled = false;
                     applyBtn.textContent = "Apply";
+                    console.log(`🔧 Apply button re-enabled`);
                 }
             } else {
                 this.showStatus("Please select a subtitle track first");
@@ -2208,15 +2234,16 @@ class MediaLibraryApp {
                 resetBtn.disabled = true;
                 resetBtn.textContent = "Resetting...";
 
-                this.subtitleOffsets[selectedTrack] = 0;
-                localStorage.removeItem(`subtitleOffset_${movieId}`);
-
                 try {
+                    this.subtitleOffsets[selectedTrack] = 0;
+                    localStorage.removeItem(`subtitleOffset_${movieId}`);
+
                     await this.loadSubtitleTracks(
                         this.currentSubtitles,
                         true,
                         selectedTrack
                     );
+
                     this.showStatus("Reset subtitle timing");
                 } catch (error) {
                     console.error("Failed to reset subtitle offset:", error);
@@ -2229,7 +2256,7 @@ class MediaLibraryApp {
             }
         };
 
-        // Track selector - keep this unchanged
+        // Track selector
         trackSelect.onchange = (e) => {
             const trackIndex = parseInt(e.target.value);
             this.setActiveSubtitleTrack(trackIndex);
@@ -2240,9 +2267,15 @@ class MediaLibraryApp {
         };
     }
 
-    updateSubtitleTrackSelector(subtitles, defaultIndex) {
+    updateSubtitleTrackSelector(subtitles, selectedIndex) {
         const trackSelect = document.getElementById("subtitle-track-select");
         if (!trackSelect) return;
+
+        // Store current selection if not specified
+        const currentSelection =
+            selectedIndex !== undefined
+                ? selectedIndex
+                : parseInt(trackSelect.value);
 
         // Clear existing options except "No Subtitles"
         trackSelect.innerHTML = '<option value="-1">No Subtitles</option>';
@@ -2250,15 +2283,17 @@ class MediaLibraryApp {
         // Add subtitle options
         subtitles.forEach((subtitle, index) => {
             const option = document.createElement("option");
-            option.value = index;
+            option.value = index.toString();
             option.textContent = `${subtitle.label} (${subtitle.language})`;
-
-            if (index === defaultIndex) {
-                option.selected = true;
-            }
-
             trackSelect.appendChild(option);
         });
+
+        // Set the selection
+        if (currentSelection >= 0 && currentSelection < subtitles.length) {
+            trackSelect.value = currentSelection.toString();
+        } else if (currentSelection === -1) {
+            trackSelect.value = "-1";
+        }
     }
 
     setActiveSubtitleTrack(trackIndex) {
@@ -2267,15 +2302,33 @@ class MediaLibraryApp {
 
         const textTracks = video.textTracks;
 
-        // Disable all tracks
-        for (let i = 0; i < textTracks.length; i++) {
-            textTracks[i].mode = "disabled";
-        }
+        try {
+            // Disable all tracks first
+            for (let i = 0; i < textTracks.length; i++) {
+                if (textTracks[i]) {
+                    textTracks[i].mode = "disabled";
+                }
+            }
 
-        // Enable selected track
-        if (trackIndex >= 0 && trackIndex < textTracks.length) {
-            textTracks[trackIndex].mode = "showing";
-            console.log(`Enabled subtitle track: ${trackIndex}`);
+            // Enable selected track
+            if (
+                trackIndex >= 0 &&
+                trackIndex < textTracks.length &&
+                textTracks[trackIndex]
+            ) {
+                textTracks[trackIndex].mode = "showing";
+                console.log(
+                    `Enabled subtitle track: ${trackIndex} (${textTracks[trackIndex].label})`
+                );
+            } else if (trackIndex === -1) {
+                console.log("Disabled all subtitle tracks");
+            } else {
+                console.warn(
+                    `Invalid track index: ${trackIndex}, available tracks: ${textTracks.length}`
+                );
+            }
+        } catch (error) {
+            console.error("Error setting active subtitle track:", error);
         }
     }
 
