@@ -2143,13 +2143,32 @@ class MediaLibraryApp {
         });
     }
 
-    parseVTTTime(hours, minutes, seconds, milliseconds) {
-        return (
-            parseInt(hours) * 3600 +
-            parseInt(minutes) * 60 +
-            parseInt(seconds) +
-            parseInt(milliseconds) / 1000
-        );
+    parseVTTTime(timeString) {
+        // Handle both HH:MM:SS.mmm and MM:SS.mmm formats
+        const parts = timeString.split(":");
+        let hours = 0,
+            minutes = 0,
+            seconds = 0;
+
+        if (parts.length === 3) {
+            // HH:MM:SS.mmm format
+            hours = parseInt(parts[0]);
+            minutes = parseInt(parts[1]);
+            const secParts = parts[2].split(".");
+            seconds = parseInt(secParts[0]);
+            const milliseconds = parseInt(secParts[1] || 0);
+            return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+        } else if (parts.length === 2) {
+            // MM:SS.mmm format
+            minutes = parseInt(parts[0]);
+            const secParts = parts[1].split(".");
+            seconds = parseInt(secParts[0]);
+            const milliseconds = parseInt(secParts[1] || 0);
+            return minutes * 60 + seconds + milliseconds / 1000;
+        }
+
+        // Fallback - shouldn't happen
+        return 0;
     }
 
     formatVTTTime(totalSeconds) {
@@ -2159,10 +2178,56 @@ class MediaLibraryApp {
         const hours = Math.floor(rounded / 3600);
         const minutes = Math.floor((rounded % 3600) / 60);
         const seconds = Math.floor(rounded % 60);
-
-        // More precise millisecond calculation
         const milliseconds = Math.round((rounded % 1) * 1000);
 
+        // Always include hours for consistency (VTT standard)
+        return `${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds
+            .toString()
+            .padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
+    }
+
+    // Improved subtitle offset methods that handle all VTT timestamp formats
+
+    parseVTTTime(timeString) {
+        // Handle both HH:MM:SS.mmm and MM:SS.mmm formats
+        const parts = timeString.split(":");
+        let hours = 0,
+            minutes = 0,
+            seconds = 0;
+
+        if (parts.length === 3) {
+            // HH:MM:SS.mmm format
+            hours = parseInt(parts[0]);
+            minutes = parseInt(parts[1]);
+            const secParts = parts[2].split(".");
+            seconds = parseInt(secParts[0]);
+            const milliseconds = parseInt(secParts[1] || 0);
+            return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+        } else if (parts.length === 2) {
+            // MM:SS.mmm format
+            minutes = parseInt(parts[0]);
+            const secParts = parts[1].split(".");
+            seconds = parseInt(secParts[0]);
+            const milliseconds = parseInt(secParts[1] || 0);
+            return minutes * 60 + seconds + milliseconds / 1000;
+        }
+
+        // Fallback - shouldn't happen
+        return 0;
+    }
+
+    formatVTTTime(totalSeconds) {
+        // Round to nearest millisecond to avoid floating-point precision issues
+        const rounded = Math.round(totalSeconds * 1000) / 1000;
+
+        const hours = Math.floor(rounded / 3600);
+        const minutes = Math.floor((rounded % 3600) / 60);
+        const seconds = Math.floor(rounded % 60);
+        const milliseconds = Math.round((rounded % 1) * 1000);
+
+        // Always include hours for consistency (VTT standard)
         return `${hours.toString().padStart(2, "0")}:${minutes
             .toString()
             .padStart(2, "0")}:${seconds
@@ -2171,25 +2236,40 @@ class MediaLibraryApp {
     }
 
     offsetTimingLine(timingLine, offsetSeconds) {
-        // Parse VTT timing line: "00:01:23.456 --> 00:01:25.789"
+        // More flexible regex that handles various VTT timestamp formats
         const timingRegex =
-            /(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})\.(\d{3})/;
+            /(\d{1,2}:)?(\d{1,2}):(\d{2})\.(\d{3})\s*-->\s*(\d{1,2}:)?(\d{1,2}):(\d{2})\.(\d{3})/;
         const match = timingLine.match(timingRegex);
 
-        if (!match) return timingLine;
+        if (!match) {
+            console.warn("Could not parse timing line:", timingLine);
+            return timingLine;
+        }
 
-        const startTime = this.parseVTTTime(
-            match[1],
-            match[2],
-            match[3],
-            match[4]
-        );
-        const endTime = this.parseVTTTime(
-            match[5],
-            match[6],
-            match[7],
-            match[8]
-        );
+        // Extract start time components
+        const startHours = match[1] ? match[1].slice(0, -1) : "0"; // Remove ':' if present
+        const startMinutes = match[2];
+        const startSeconds = match[3];
+        const startMilliseconds = match[4];
+
+        // Extract end time components
+        const endHours = match[5] ? match[5].slice(0, -1) : "0"; // Remove ':' if present
+        const endMinutes = match[6];
+        const endSecondsStr = match[7];
+        const endMilliseconds = match[8];
+
+        // Parse times
+        const startTime =
+            parseInt(startHours) * 3600 +
+            parseInt(startMinutes) * 60 +
+            parseInt(startSeconds) +
+            parseInt(startMilliseconds) / 1000;
+
+        const endTime =
+            parseInt(endHours) * 3600 +
+            parseInt(endMinutes) * 60 +
+            parseInt(endSecondsStr) +
+            parseInt(endMilliseconds) / 1000;
 
         // Apply offset and handle negative times properly
         let newStartTime = startTime + offsetSeconds;
@@ -2217,13 +2297,36 @@ class MediaLibraryApp {
         console.log(`Applying ${offsetSeconds}s offset to subtitle`);
 
         const lines = vttContent.split("\n");
-        const processedLines = lines.map((line) => {
+        let processedCount = 0;
+
+        const processedLines = lines.map((line, index) => {
             // Check if line contains timing information
             if (line.includes("-->")) {
-                return this.offsetTimingLine(line, offsetSeconds);
+                const originalLine = line;
+                const processedLine = this.offsetTimingLine(
+                    line,
+                    offsetSeconds
+                );
+
+                if (processedLine !== originalLine) {
+                    processedCount++;
+                } else {
+                    console.warn(
+                        `Failed to process timing line ${index + 1}:`,
+                        originalLine
+                    );
+                }
+
+                return processedLine;
             }
             return line;
         });
+
+        console.log(
+            `Successfully processed ${processedCount} timing lines out of ${
+                lines.filter((l) => l.includes("-->")).length
+            } total`
+        );
 
         return processedLines.join("\n");
     }
