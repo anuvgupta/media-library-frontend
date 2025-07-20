@@ -1040,7 +1040,9 @@ class MediaLibraryApp {
 
                 return `
                     <div class="movie-card">
-                        <div class="movie-poster">
+                        <div class="movie-poster" onclick="window.mediaLibraryApp.showMovieView(${JSON.stringify(
+                            movie
+                        ).replace(/"/g, "&quot;")})">
                             ${this.renderMoviePosterWithFallback(
                                 posterUrls,
                                 movie.name
