@@ -2027,8 +2027,10 @@ class MediaLibraryApp {
         const trackSelect = document.getElementById("subtitle-track-select");
 
         // Load saved offset for this movie
-        const movieId = this.getMovieId(this.currentMovie);
-        const savedOffset = localStorage.getItem(`subtitleOffset_${movieId}`);
+        const defaultTrack = this.selectedSubtitleTrack;
+        const savedOffset = localStorage.getItem(
+            `subtitleOffset_${movieId}_${defaultTrack}`
+        );
         if (savedOffset) {
             offsetInput.value = savedOffset;
         }
@@ -2044,7 +2046,12 @@ class MediaLibraryApp {
                 await this.addSelectedSubtitleTrack(trackIndex);
 
                 // Update offset input with saved offset for this track
-                const offset = this.subtitleOffsets[trackIndex] || 0;
+                const savedOffset =
+                    localStorage.getItem(
+                        `subtitleOffset_${movieId}_${trackIndex}`
+                    ) || 0;
+                const offset = parseFloat(savedOffset);
+                this.subtitleOffsets[trackIndex] = offset;
                 offsetInput.value = offset.toString();
             } catch (error) {
                 console.error("Failed to switch subtitle track:", error);
@@ -2072,7 +2079,7 @@ class MediaLibraryApp {
 
                     // Save offset preference
                     localStorage.setItem(
-                        `subtitleOffset_${movieId}`,
+                        `subtitleOffset_${movieId}_${selectedTrack}`,
                         offset.toString()
                     );
 
@@ -2107,7 +2114,9 @@ class MediaLibraryApp {
                     // Reset offset
                     offsetInput.value = "0";
                     this.subtitleOffsets[selectedTrack] = 0;
-                    localStorage.removeItem(`subtitleOffset_${movieId}`);
+                    localStorage.removeItem(
+                        `subtitleOffset_${movieId}_${selectedTrack}`
+                    );
 
                     // Reload track with no offset
                     await this.addSelectedSubtitleTrack(selectedTrack);
