@@ -2006,18 +2006,36 @@ class MediaLibraryApp {
         // Setup subtitle track selector
         this.updateSubtitleTrackSelector(subtitles);
 
-        // Auto-select English track if available, otherwise select first track
-        const defaultTrack = englishIndex !== -1 ? englishIndex : 0;
-        this.selectedSubtitleTrack = defaultTrack;
+        // // Auto-select English track if available, otherwise select first track
+        // const defaultTrack = englishIndex !== -1 ? englishIndex : 0;
+        // this.selectedSubtitleTrack = defaultTrack;
+        const movieId = this.getMovieId(this.currentMovie);
+        const savedTrack = this.getSavedSubtitleTrack(movieId);
+        let selectedTrack;
+        if (
+            savedTrack !== null &&
+            savedTrack >= -1 &&
+            savedTrack < subtitles.length
+        ) {
+            // Use saved track if valid
+            selectedTrack = savedTrack;
+        } else {
+            // Fallback to English or first track
+            selectedTrack = englishIndex !== -1 ? englishIndex : 0;
+        }
+
+        this.selectedSubtitleTrack = selectedTrack;
 
         // Update dropdown to show selected track
         const trackSelect = document.getElementById("subtitle-track-select");
         if (trackSelect) {
-            trackSelect.value = defaultTrack.toString();
+            trackSelect.value = selectedTrack.toString();
         }
 
-        // Load the default track
-        await this.addSelectedSubtitleTrack(defaultTrack);
+        // Load the selected track (only if not "No Subtitles")
+        if (selectedTrack >= 0) {
+            await this.addSelectedSubtitleTrack(selectedTrack);
+        }
     }
 
     setupSubtitleControls() {
@@ -2040,6 +2058,9 @@ class MediaLibraryApp {
         trackSelect.onchange = async (e) => {
             const trackIndex = parseInt(e.target.value);
             this.selectedSubtitleTrack = trackIndex;
+
+            // Save the selected track for this movie
+            this.saveSelectedSubtitleTrack(movieId, trackIndex);
 
             console.log(`🎬 Switching to subtitle track: ${trackIndex}`);
 
@@ -2151,6 +2172,22 @@ class MediaLibraryApp {
             })`;
             trackSelect.appendChild(option);
         });
+    }
+
+    saveSelectedSubtitleTrack(movieId, trackIndex) {
+        if (trackIndex === -1) {
+            localStorage.removeItem(`subtitleTrack_${movieId}`);
+        } else {
+            localStorage.setItem(
+                `subtitleTrack_${movieId}`,
+                trackIndex.toString()
+            );
+        }
+    }
+
+    getSavedSubtitleTrack(movieId) {
+        const saved = localStorage.getItem(`subtitleTrack_${movieId}`);
+        return saved !== null ? parseInt(saved) : null;
     }
 
     parseVTTTime(timeString) {
