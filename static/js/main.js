@@ -2034,6 +2034,14 @@ class MediaLibraryApp {
 
         // Load the selected track (only if not "No Subtitles")
         if (selectedTrack >= 0) {
+            // Load saved offset for the selected track
+            const savedOffset =
+                localStorage.getItem(
+                    `subtitleOffset_${movieId}_${selectedTrack}`
+                ) || 0;
+            const offset = parseFloat(savedOffset);
+            this.subtitleOffsets[selectedTrack] = offset;
+
             await this.addSelectedSubtitleTrack(selectedTrack);
         }
     }
@@ -2044,14 +2052,17 @@ class MediaLibraryApp {
         const resetBtn = document.getElementById("reset-subtitle-offset");
         const trackSelect = document.getElementById("subtitle-track-select");
 
-        // Load saved offset for this movie
+        // Load saved offset for this movie and current track
         const movieId = this.getMovieId(this.currentMovie);
-        const defaultTrack = this.selectedSubtitleTrack;
-        const savedOffset = localStorage.getItem(
-            `subtitleOffset_${movieId}_${defaultTrack}`
-        );
-        if (savedOffset) {
+        const currentTrack = this.selectedSubtitleTrack;
+        if (currentTrack >= 0) {
+            const savedOffset =
+                localStorage.getItem(
+                    `subtitleOffset_${movieId}_${currentTrack}`
+                ) || 0;
             offsetInput.value = savedOffset;
+            // Also ensure the offset is stored in the offsets object
+            this.subtitleOffsets[currentTrack] = parseFloat(savedOffset);
         }
 
         // Track selector change handler
