@@ -2141,21 +2141,31 @@ class MediaLibraryApp {
         });
     }
 
-    applySubtitleOffset(vttContent, offsetSeconds) {
-        if (offsetSeconds === 0) return vttContent;
+    parseVTTTime(hours, minutes, seconds, milliseconds) {
+        return (
+            parseInt(hours) * 3600 +
+            parseInt(minutes) * 60 +
+            parseInt(seconds) +
+            parseInt(milliseconds) / 1000
+        );
+    }
 
-        console.log(`Applying ${offsetSeconds}s offset to subtitle`);
+    formatVTTTime(totalSeconds) {
+        // Round to nearest millisecond to avoid floating-point precision issues
+        const rounded = Math.round(totalSeconds * 1000) / 1000;
 
-        const lines = vttContent.split("\n");
-        const processedLines = lines.map((line) => {
-            // Check if line contains timing information
-            if (line.includes("-->")) {
-                return this.offsetTimingLine(line, offsetSeconds);
-            }
-            return line;
-        });
+        const hours = Math.floor(rounded / 3600);
+        const minutes = Math.floor((rounded % 3600) / 60);
+        const seconds = Math.floor(rounded % 60);
 
-        return processedLines.join("\n");
+        // More precise millisecond calculation
+        const milliseconds = Math.round((rounded % 1) * 1000);
+
+        return `${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds
+            .toString()
+            .padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
     }
 
     offsetTimingLine(timingLine, offsetSeconds) {
@@ -2179,11 +2189,19 @@ class MediaLibraryApp {
             match[8]
         );
 
-        const newStartTime = Math.max(0, startTime + offsetSeconds);
-        const newEndTime = Math.max(
-            newStartTime + 0.1,
-            endTime + offsetSeconds
-        );
+        // Apply offset and handle negative times properly
+        let newStartTime = startTime + offsetSeconds;
+        let newEndTime = endTime + offsetSeconds;
+
+        // If start time goes negative, clip to 0 and adjust end time accordingly
+        if (newStartTime < 0) {
+            const adjustment = -newStartTime;
+            newStartTime = 0;
+            newEndTime = Math.max(0.1, newEndTime + adjustment);
+        }
+
+        // Ensure end time is always after start time
+        newEndTime = Math.max(newStartTime + 0.1, newEndTime);
 
         const newStartFormatted = this.formatVTTTime(newStartTime);
         const newEndFormatted = this.formatVTTTime(newEndTime);
@@ -2191,26 +2209,21 @@ class MediaLibraryApp {
         return `${newStartFormatted} --> ${newEndFormatted}`;
     }
 
-    parseVTTTime(hours, minutes, seconds, milliseconds) {
-        return (
-            parseInt(hours) * 3600 +
-            parseInt(minutes) * 60 +
-            parseInt(seconds) +
-            parseInt(milliseconds) / 1000
-        );
-    }
+    applySubtitleOffset(vttContent, offsetSeconds) {
+        if (offsetSeconds === 0) return vttContent;
 
-    formatVTTTime(totalSeconds) {
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = Math.floor(totalSeconds % 60);
-        const milliseconds = Math.floor((totalSeconds % 1) * 1000);
+        console.log(`Applying ${offsetSeconds}s offset to subtitle`);
 
-        return `${hours.toString().padStart(2, "0")}:${minutes
-            .toString()
-            .padStart(2, "0")}:${seconds
-            .toString()
-            .padStart(2, "0")}.${milliseconds.toString().padStart(3, "0")}`;
+        const lines = vttContent.split("\n");
+        const processedLines = lines.map((line) => {
+            // Check if line contains timing information
+            if (line.includes("-->")) {
+                return this.offsetTimingLine(line, offsetSeconds);
+            }
+            return line;
+        });
+
+        return processedLines.join("\n");
     }
 
     isRetryableStreamError(errorData) {
