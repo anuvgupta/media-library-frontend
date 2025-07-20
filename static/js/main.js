@@ -1309,6 +1309,10 @@ class MediaLibraryApp {
             } else if (error.statusCode === 401) {
                 this.showStatus("Session expired. Please sign in again.");
                 this.handleLogout();
+            } else if (error.message.includes("Invalid login token")) {
+                console.log(error, error.message);
+                this.showStatus("Please login again!");
+                this.showSigninView();
             } else {
                 this.showStatus(
                     "Error loading shared users: " +
