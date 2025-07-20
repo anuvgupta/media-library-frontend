@@ -595,3 +595,107 @@ div.logout-btn {
         padding: 12px;
     }
 }
+
+/* Subtitle Controls */
+.subtitle-controls {
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.subtitle-controls h4 {
+    margin: 0 0 15px 0;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.subtitle-control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.subtitle-control-row:last-child {
+    margin-bottom: 0;
+}
+
+.subtitle-control-row label {
+    font-weight: 500;
+    color: var(--text-color);
+    min-width: 80px;
+}
+
+.subtitle-control-row input[type="number"] {
+    width: 80px;
+    text-align: center;
+}
+
+.subtitle-control-row select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    min-width: 150px;
+    transition: background-color .3s ease, color .3s ease;
+}
+
+.subtitle-control-row select:focus {
+    outline: 1px solid var(--navbar-bg);
+}
+
+.subtitle-control-row span {
+    color: var(--status-text);
+    font-size: 0.9em;
+}
+
+/* Subtitle control buttons */
+.subtitle-controls button {
+    font-size: 0.9em;
+    padding: 6px 12px;
+}
+
+.subtitle-controls button#reset-subtitle-offset {
+    background-color: #6c757d;
+    color: white;
+}
+
+.subtitle-controls button#reset-subtitle-offset:hover {
+    background-color: #5a6268;
+}
+
+/* Responsive subtitle controls */
+@media (max-width: 600px) {
+    .subtitle-control-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .subtitle-control-row label {
+        min-width: auto;
+    }
+
+    .subtitle-control-row input[type="number"],
+    .subtitle-control-row select {
+        width: 100%;
+        max-width: 200px;
+    }
+
+    .subtitle-controls {
+        padding: 12px;
+    }
+}
+
+/* Dark theme specific adjustments */
+[data-theme="dark"] .subtitle-control-row select {
+    background-color: var(--input-bg);
+}
+
+[data-theme="dark"] .subtitle-control-row select:focus {
+    outline: 1px solid var(--navbar-bg);
+}
