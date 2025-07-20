@@ -531,6 +531,7 @@ div.logout-btn {
     border-radius: 4px;
     margin-bottom: 10px;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .movie-poster img {
