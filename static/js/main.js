@@ -104,13 +104,13 @@ class MediaLibraryApp {
                 this.clearMoviePageContent();
                 this.updateMovieDescription();
             });
-        document
-            .getElementById("back-to-library-btn")
-            .addEventListener("click", () => {
-                this.showLibraryView(this.currentLibraryOwner);
-                this.clearMoviePageContent();
-                this.updateMovieDescription();
-            });
+        // document
+        //     .getElementById("back-to-library-btn")
+        //     .addEventListener("click", () => {
+        //         this.showLibraryView(this.currentLibraryOwner);
+        //         this.clearMoviePageContent();
+        //         this.updateMovieDescription();
+        //     });
 
         // Library sharing
         document
