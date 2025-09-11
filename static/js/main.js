@@ -28,6 +28,8 @@ class MediaLibraryApp {
             phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
             isRetrying: false,
         };
+        this.contentType = 'movies'; // 'movies' or 'tv'
+        this.allTVShowsForSearch = [];
 
         this.showStatusTimeout = null;
         this.lastSavedPosition = 0;
@@ -259,6 +261,11 @@ class MediaLibraryApp {
             libraryOwner: this.currentLibraryOwner,
             movieId: movieId,
         });
+    }
+
+    showTVShowView(show) {
+        console.log("TV Show view not implemented yet:", show);
+        this.showStatus("TV Show view coming soon!");
     }
 
     showMovieStatusBar() {
@@ -930,25 +937,63 @@ class MediaLibraryApp {
     displayLibraryData() {
         const container = document.getElementById("library-content");
 
-        if (
-            !this.currentLibraryData ||
-            Object.keys(this.currentLibraryData).length === 0
-        ) {
+        if (!this.currentLibraryData || Object.keys(this.currentLibraryData).length === 0) {
+            container.innerHTML = "<p>No content found in this library.</p>";
+            return;
+        }
+
+        // Add content type selector
+        container.innerHTML = `
+            <div class="content-type-selector" style="margin-bottom: 20px;">
+                <button id="movies-tab" class="content-tab active" onclick="window.mediaLibraryApp.showMoviesContent()">Movies</button>
+                <button id="tv-tab" class="content-tab" onclick="window.mediaLibraryApp.showTVContent()">TV Shows</button>
+            </div>
+            <div id="content-container"></div>
+        `;
+
+        // Default to showing movies
+        this.contentType = 'movies';
+        this.showMoviesContent();
+    }
+
+    showMoviesContent() {
+        this.contentType = 'movies';
+        this.updateContentTabs();
+        this.displayMoviesData();
+    }
+
+    showTVContent() {
+        this.contentType = 'tv';
+        this.updateContentTabs();
+        this.displayTVData();
+    }
+
+    updateContentTabs() {
+        // Update tab styling
+        document.getElementById('movies-tab').classList.toggle('active', this.contentType === 'movies');
+        document.getElementById('tv-tab').classList.toggle('active', this.contentType === 'tv');
+    }
+
+    displayMoviesData() {
+        const container = document.getElementById("content-container");
+        const moviesData = this.currentLibraryData.movies;
+
+        if (!moviesData || Object.keys(moviesData).length === 0) {
             container.innerHTML = "<p>No movies found in this library.</p>";
             return;
         }
 
-        // Flatten all movies from all groups into a single array
+        // Flatten all movies from all collections into a single array
         const allMovies = [];
-        Object.keys(this.currentLibraryData).forEach((collection) => {
-            const moviesInCollection = this.currentLibraryData[collection];
+        Object.keys(moviesData).forEach((collection) => {
+            const moviesInCollection = moviesData[collection];
             const collectionSize = moviesInCollection.length;
 
             moviesInCollection.forEach((movie) => {
                 allMovies.push({
                     ...movie,
                     collection,
-                    collectionSize, // Add collection size for display logic
+                    collectionSize,
                 });
             });
         });
@@ -986,9 +1031,108 @@ class MediaLibraryApp {
         const searchInput = document.getElementById("movie-search-input");
         if (searchInput) {
             searchInput.addEventListener("input", (e) => {
-                this.filterMovies(e.target.value);
+                this.filterContent(e.target.value);
             });
         }
+    }
+
+    displayTVData() {
+        const container = document.getElementById("content-container");
+        const tvData = this.currentLibraryData.tv;
+
+        if (!tvData || Object.keys(tvData).length === 0) {
+            container.innerHTML = "<p>No TV shows found in this library.</p>";
+            return;
+        }
+
+        // Flatten all TV shows from all categories
+        const allTVShows = [];
+        Object.keys(tvData).forEach((category) => {
+            const showsInCategory = tvData[category];
+            Object.keys(showsInCategory).forEach((showName) => {
+                const show = showsInCategory[showName];
+                const seasonCount = Object.keys(show.seasons || {}).length;
+                const totalEpisodes = Object.values(show.seasons || {}).reduce((total, episodes) => total + episodes.length, 0);
+                
+                allTVShows.push({
+                    ...show,
+                    category,
+                    seasonCount,
+                    totalEpisodes,
+                    showId: showName // Use the key as the show ID
+                });
+            });
+        });
+
+        // Sort TV shows alphabetically by name
+        allTVShows.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        // Store all TV shows for search functionality
+        this.allTVShowsForSearch = allTVShows;
+
+        container.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>TV Shows (${allTVShows.length})</h3>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <input 
+                    type="text" 
+                    id="tv-search-input" 
+                    placeholder="Search TV shows by title, category..." 
+                    style="
+                        width: 100%; 
+                        padding: 10px; 
+                        border-radius: 4px; 
+                        font-size: 16px;
+                        box-sizing: border-box;
+                    "
+                />
+            </div>
+            <div id="tv-shows-list">
+                ${this.renderTVShowsList(allTVShows)}
+            </div>
+        `;
+
+        // Add search functionality
+        const searchInput = document.getElementById("tv-search-input");
+        if (searchInput) {
+            searchInput.addEventListener("input", (e) => {
+                this.filterContent(e.target.value);
+            });
+        }
+    }
+
+    renderTVShowsList(tvShows) {
+        if (tvShows.length === 0) {
+            return "<p>No TV shows match your search.</p>";
+        }
+
+        return `<div class="movies-grid">${tvShows
+            .map((show) => {
+                // For now, we'll use a placeholder for TV show posters
+                // You'll need to implement TV show poster logic later
+                const posterHtml = `<div style="width: 100%; height: 100%; background: var(--progress-bg); display: flex; align-items: center; justify-content: center; color: var(--status-text);">TV Show</div>`;
+
+                return `
+                    <div class="movie-card">
+                        <div class="movie-poster" onclick="window.mediaLibraryApp.showTVShowView(${JSON.stringify(show).replace(/"/g, "&quot;")})">
+                            ${posterHtml}
+                        </div>
+                        <div class="movie-info">
+                            <div class="movie-title">${show.name || "Unknown Title"}</div>
+                            <div class="movie-details">
+                                <p><strong>Seasons:</strong> ${show.seasonCount || 0}</p>
+                                <p><strong>Episodes:</strong> ${show.totalEpisodes || 0}</p>
+                                <p><strong>Category:</strong> ${show.category || "Unknown"}</p>
+                            </div>
+                            <button class="movie-button" onclick="window.mediaLibraryApp.showTVShowView(${JSON.stringify(show).replace(/"/g, "&quot;")})">
+                                View Show
+                            </button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("")}</div>`;
     }
 
     getMoviePosterUrls(movie) {
@@ -1150,6 +1294,14 @@ class MediaLibraryApp {
         );
     }
 
+    filterContent(searchTerm) {
+        if (this.contentType === 'movies') {
+            this.filterMovies(searchTerm);
+        } else if (this.contentType === 'tv') {
+            this.filterTVShows(searchTerm);
+        }
+    }
+
     filterMovies(searchTerm) {
         if (!this.allMoviesForSearch) return;
 
@@ -1171,7 +1323,7 @@ class MediaLibraryApp {
         });
 
         // Update the movies count in the header
-        const moviesHeader = document.querySelector("#library-content h3");
+        const moviesHeader = document.querySelector("#content-container h3");
         if (moviesHeader) {
             const totalCount = this.allMoviesForSearch.length;
             const filteredCount = filteredMovies.length;
@@ -1186,6 +1338,36 @@ class MediaLibraryApp {
         const moviesList = document.getElementById("movies-list");
         if (moviesList) {
             moviesList.innerHTML = this.renderMoviesList(filteredMovies);
+        }
+    }
+
+    filterTVShows(searchTerm) {
+        if (!this.allTVShowsForSearch) return;
+
+        const filteredShows = this.allTVShowsForSearch.filter((show) => {
+            const searchLower = searchTerm.toLowerCase();
+            const name = (show.name || "").toLowerCase();
+            const category = (show.category || "").toLowerCase();
+
+            return name.includes(searchLower) || category.includes(searchLower);
+        });
+
+        // Update the TV shows count in the header
+        const tvHeader = document.querySelector("#content-container h3");
+        if (tvHeader) {
+            const totalCount = this.allTVShowsForSearch.length;
+            const filteredCount = filteredShows.length;
+            if (searchTerm.trim()) {
+                tvHeader.textContent = `TV Shows (${filteredCount} of ${totalCount})`;
+            } else {
+                tvHeader.textContent = `TV Shows (${totalCount})`;
+            }
+        }
+
+        // Update the TV shows list
+        const tvShowsList = document.getElementById("tv-shows-list");
+        if (tvShowsList) {
+            tvShowsList.innerHTML = this.renderTVShowsList(filteredShows);
         }
     }
 

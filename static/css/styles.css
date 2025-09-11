@@ -700,3 +700,73 @@ div.logout-btn {
 [data-theme="dark"] .subtitle-control-row select:focus {
     outline: 1px solid var(--navbar-bg);
 }
+
+/* Content Type Selector Tabs */
+.content-type-selector {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.content-tab {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--status-text);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 16px;
+}
+
+.content-tab:hover {
+    background-color: var(--container-bg);
+    color: var(--text-color);
+}
+
+.content-tab.active {
+    color: var(--navbar-bg);
+    border-bottom-color: var(--navbar-bg);
+    background: none;
+}
+
+.content-tab.active:hover {
+    background: none;
+    color: var(--navbar-bg);
+}
+
+/* Responsive tabs */
+@media (max-width: 600px) {
+    .content-tab {
+        flex: 1;
+        text-align: center;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+}
+
+#tv-search-input {
+    border: 1px solid #e2e2e2;
+    transition: all 0.3s;
+}
+
+#tv-search-input:focus {
+    outline: 1px solid #007bff;
+}
+
+#tv-search-input:focus-visible {
+    outline: 1px solid #007bff;
+}
+
+[data-theme="dark"] #tv-search-input {
+    border: 1px solid #444;
+}
+
+[data-theme="dark"] #tv-search-input:focus {
+    outline: 1px solid #007bff;
+}
+
+[data-theme="dark"] #tv-search-input:focus-visible {
+    outline: 1px solid #007bff;
+}
