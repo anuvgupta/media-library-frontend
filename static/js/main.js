@@ -145,10 +145,7 @@ class MediaLibraryApp {
         document
             .getElementById("back-to-library-from-tvshow-btn")
             .addEventListener("click", () => {
-                this.currentLibraryOwner = null;
-                this.currentLibraryData = null;
-                this.showLibrariesView();
-                this.clearLibraryPageContent();
+                this.showLibraryView(this.currentLibraryOwner);
                 this.clearMediaPageContent();
             });
     }
