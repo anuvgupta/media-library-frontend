@@ -988,6 +988,7 @@ class MediaLibraryApp {
         Object.keys(moviesData).forEach((collection) => {
             const moviesInCollection = moviesData[collection];
             const collectionSize = moviesInCollection.length;
+            console.log(moviesInCollection);
 
             moviesInCollection.forEach((movie) => {
                 allMovies.push({
