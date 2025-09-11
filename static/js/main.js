@@ -2101,7 +2101,7 @@ class MediaLibraryApp {
     }
 
     getMoviePathInLibrary(movie) {
-        return `${movie.collection}/${movie.name} (${movie.year})/${movie.videoFile}`;
+        return movie.path;
     }
 
     getMovieId(movie) {
