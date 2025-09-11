@@ -280,22 +280,21 @@
                 <br />
             </div>
         </div>
-        <!-- Movie View -->
-        <div id="movie-view" style="display: none">
+        
+        <!-- TV Show View -->
+        <div id="tvshow-view" style="display: none">
             <!-- Account Section -->
             <div class="account-section">
                 <h3>Account</h3>
                 <div class="account-section-content"></div>
-                <button class="logout-btn" id="logout-btn-movie">
+                <button class="logout-btn" id="logout-btn-tvshow">
                     Sign Out
                 </button>
             </div>
 
             <br />
 
-            <!-- <div class="section-spacer"></div> -->
-
-            <button id="back-to-library-btn">← Back to Library</button>
+            <button id="back-to-library-from-tvshow-btn">← Back to Library</button>
 
             <div class="section-spacer"></div>
 
@@ -304,11 +303,63 @@
             <div class="section-spacer"></div>
             <div class="section-spacer"></div>
 
-            <!-- Movie Content Section -->
+            <!-- TV Show Content Section -->
             <div>
-                <h2 id="movie-title">Movie Title</h2>
+                <h2 id="tvshow-title">TV Show Title</h2>
 
-                <!-- Video Player -->
+                <!-- TV Show Details -->
+                <div id="tvshow-details-container" style="margin-bottom: 20px">
+                    <div id="tvshow-poster-container"></div>
+                    <div id="tvshow-details-content">
+                        <div>
+                            <strong>Description:</strong>
+                            <p id="tvshow-description">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <br />
+
+                <!-- Seasons and Episodes Section -->
+                <div>
+                    <h3>Seasons & Episodes</h3>
+                    <div id="seasons-episodes-container">
+                        <p>Loading seasons and episodes...</p>
+                    </div>
+                </div>
+
+                <div class="section-spacer"></div>
+            </div>
+        </div>
+
+        <!-- Unified Media View (replaces movie-view) -->
+        <div id="media-view" style="display: none">
+            <!-- Account Section -->
+            <div class="account-section">
+                <h3>Account</h3>
+                <div class="account-section-content"></div>
+                <button class="logout-btn" id="logout-btn-media">
+                    Sign Out
+                </button>
+            </div>
+
+            <br />
+
+            <!-- Dynamic Back Button -->
+            <button id="back-from-media-btn">← Back</button>
+
+            <div class="section-spacer"></div>
+
+            <hr />
+
+            <div class="section-spacer"></div>
+            <div class="section-spacer"></div>
+
+            <!-- Media Content Section -->
+            <div>
+                <h2 id="media-title">Media Title</h2>
+
+                <!-- Video Player (same as before) -->
                 <div class="player-container" style="margin-bottom: 20px">
                     <!-- Play Button Overlay -->
                     <div
@@ -424,34 +475,9 @@
                             Loading video...
                         </div>
                     </div>
-
-                    <!-- <div
-                        class="quality-selector"
-                        id="quality-selector"
-                        style="
-                            position: absolute;
-                            top: 15px;
-                            right: 15px;
-                            z-index: 20;
-                            display: none;
-                        "
-                    >
-                        <select
-                            id="quality-select"
-                            style="
-                                background: rgba(0, 0, 0, 0.7);
-                                color: white;
-                                border: 1px solid #444;
-                                padding: 5px 10px;
-                                border-radius: 4px;
-                                font-size: 12px;
-                            "
-                        >
-                            <option value="auto">Auto Quality</option>
-                        </select>
-                    </div> -->
                 </div>
 
+                <!-- Subtitle Controls (same as before) -->
                 <div
                     class="subtitle-controls"
                     style="margin-bottom: 20px; display: none"
@@ -480,6 +506,7 @@
                     </div>
                 </div>
 
+                <!-- Status Bar (same as before) -->
                 <div
                     id="movie-status-bar"
                     class="movie-status-bar hidden"
@@ -487,9 +514,7 @@
                 >
                     <div class="status-content">
                         <div class="status-text">
-                            <span id="status-message-text"
-                                >Processing movie...</span
-                            >
+                            <span id="status-message-text">Processing media...</span>
                             <span id="status-percentage">0%</span>
                         </div>
                         <div class="status-progress-bar">
@@ -506,28 +531,31 @@
                     </div>
                 </div>
 
-                <!-- Movie Details -->
-                <div id="movie-details-container" style="margin-bottom: 20px">
-                    <div id="poster-container"></div>
-                    <div id="movie-details-content">
-                        <p>
-                            <strong>Year:</strong>
-                            <span id="movie-year">Unknown</span>
-                        </p>
-                        <p>
-                            <strong>Runtime:</strong>
-                            <span id="movie-runtime">Unknown</span>
-                        </p>
-                        <p>
-                            <strong>Quality:</strong>
-                            <span id="movie-quality">Unknown</span>
-                        </p>
+                <!-- Dynamic Media Details -->
+                <div id="media-details-container" style="margin-bottom: 20px">
+                    <div id="media-poster-container"></div>
+                    <div id="media-details-content">
+                        <!-- Movie-specific fields -->
+                        <div id="movie-metadata" style="display: none;">
+                            <p><strong>Year:</strong> <span id="media-year">Unknown</span></p>
+                            <p><strong>Runtime:</strong> <span id="media-runtime">Unknown</span></p>
+                            <p><strong>Quality:</strong> <span id="media-quality">Unknown</span></p>
+                        </div>
 
-                        <!-- Description Section -->
+                        <!-- Episode-specific fields -->
+                        <div id="episode-metadata" style="display: none;">
+                            <p><strong>Show:</strong> <span id="media-show-name">Unknown</span></p>
+                            <p><strong>Season:</strong> <span id="media-season">Unknown</span></p>
+                            <p><strong>Episode:</strong> <span id="media-episode-number">Unknown</span></p>
+                            <p><strong>Episode Title:</strong> <span id="media-episode-title">Unknown</span></p>
+                            <p><strong>Runtime:</strong> <span id="media-episode-runtime">Unknown</span></p>
+                            <p><strong>Quality:</strong> <span id="media-episode-quality">Unknown</span></p>
+                        </div>
 
+                        <!-- Description Section (shared) -->
                         <div>
                             <strong>Description:</strong>
-                            <p id="movie-description">Loading...</p>
+                            <p id="media-description">Loading...</p>
                         </div>
                     </div>
                 </div>

@@ -87,7 +87,10 @@ class MediaLibraryApp {
             .getElementById("logout-btn-libraries")
             .addEventListener("click", () => this.handleLogout());
         document
-            .getElementById("logout-btn-movie")
+            .getElementById("logout-btn-media")
+            .addEventListener("click", () => this.handleLogout());
+        document
+            .getElementById("logout-btn-tvshow")
             .addEventListener("click", () => this.handleLogout());
 
         // Navigation buttons
@@ -133,6 +136,33 @@ class MediaLibraryApp {
             .addEventListener("keypress", (e) => {
                 if (e.key === "Enter") this.handleVerification();
             });
+
+        // Update back button handlers
+        document
+            .getElementById("back-from-media-btn")
+            .addEventListener("click", () => this.handleBackFromMedia());
+
+        document
+            .getElementById("back-to-library-from-tvshow-btn")
+            .addEventListener("click", () => {
+                this.currentLibraryOwner = null;
+                this.currentLibraryData = null;
+                this.showLibrariesView();
+                this.clearLibraryPageContent();
+                this.clearMediaPageContent();
+            });
+    }
+
+    handleBackFromMedia() {
+        if (this.currentTVShow) {
+            // Coming from episode, go back to TV show
+            this.showTVShowView(this.currentTVShow);
+            this.clearMediaPageContent();
+        } else {
+            // Coming from movie, go back to library
+            this.showLibraryView(this.currentLibraryOwner);
+            this.clearMediaPageContent();
+        }
     }
 
     savePlaybackPosition(movieId, position) {
@@ -460,9 +490,8 @@ class MediaLibraryApp {
             "verification-view",
             "libraries-view",
             "library-view",
-            "movie-view",
             "tvshow-view",
-            "episode-view",
+            "media-view",
         ];
         views.forEach((view) => {
             document.getElementById(view).style.display = "none";
