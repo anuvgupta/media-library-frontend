@@ -1218,7 +1218,7 @@ class MediaLibraryApp {
                 <input 
                     type="text" 
                     id="movie-search-input" 
-                    placeholder="Search movies by title, year, collection..." 
+                    placeholder="Search movies by title, collection..." 
                     style="
                         width: 100%; 
                         padding: 10px; 
