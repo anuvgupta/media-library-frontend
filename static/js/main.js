@@ -101,14 +101,14 @@ class MediaLibraryApp {
                 this.currentLibraryData = null; // Clear library data
                 this.showLibrariesView();
                 this.clearLibraryPageContent();
-                this.clearMoviePageContent();
+                this.clearMediaPageContent();
                 this.updateMovieDescription();
             });
         // document
         //     .getElementById("back-to-library-btn")
         //     .addEventListener("click", () => {
         //         this.showLibraryView(this.currentLibraryOwner);
-        //         this.clearMoviePageContent();
+        //         this.clearMediaPageContent();
         //         this.updateMovieDescription();
         //     });
 
@@ -269,19 +269,19 @@ class MediaLibraryApp {
     showMovieView(movie) {
         this.hideAllViews();
         this.currentMovie = movie;
-        document.getElementById("movie-view").style.display = "block";
-        document.getElementById("movie-title").textContent =
-            movie.name || "Unknown Title";
+        this.currentTVShow = null; // Clear TV show context
+        this.currentSeason = null;
+        this.currentEpisode = null;
+        
+        document.getElementById("media-view").style.display = "block";
+        document.getElementById("media-title").textContent = movie.name || "Unknown Title";
 
-        // Update movie details
-        document.getElementById("movie-year").textContent =
-            movie.year || "Unknown";
-        document.getElementById("movie-runtime").textContent =
-            movie.runtime || "Unknown";
-        document.getElementById("movie-quality").textContent =
-            movie.quality || "Unknown";
-
+        // Set up movie-specific metadata
+        this.setupMovieMetadata(movie);
         this.updateAccountSection();
+
+        // Update back button
+        this.updateMediaBackButton("← Back to Library");
 
         // Load movie metadata
         this.loadMovieMetadata(movie);
@@ -322,22 +322,20 @@ class MediaLibraryApp {
         this.currentTVShow = show;
         this.currentSeason = seasonNum;
         this.currentEpisode = episode;
+        this.currentMovie = null; // Clear movie context
         
-        document.getElementById("episode-view").style.display = "block";
+        document.getElementById("media-view").style.display = "block";
         
-        // Update episode title and info
+        // Update media title for episode
         const episodeTitle = `${show.name} - S${seasonNum.toString().padStart(2, '0')}E${episode.episode.toString().padStart(2, '0')} ${episode.episodeTitle || ''}`;
-        document.getElementById("episode-title").textContent = episodeTitle;
+        document.getElementById("media-title").textContent = episodeTitle;
 
-        // Update episode details
-        document.getElementById("episode-show-name").textContent = show.name || "Unknown Show";
-        document.getElementById("episode-season").textContent = `Season ${seasonNum}`;
-        document.getElementById("episode-number").textContent = `Episode ${episode.episode}`;
-        document.getElementById("episode-episode-title").textContent = episode.episodeTitle || "Unknown Episode";
-        document.getElementById("episode-runtime").textContent = episode.runtime || "Unknown";
-        document.getElementById("episode-quality").textContent = episode.quality || "Unknown";
-
+        // Set up episode-specific metadata
+        this.setupEpisodeMetadata(show, seasonNum, episode);
         this.updateAccountSection();
+
+        // Update back button
+        this.updateMediaBackButton("← Back to Show");
 
         // Load episode metadata
         this.loadEpisodeMetadata(show, seasonNum, episode);
@@ -352,6 +350,51 @@ class MediaLibraryApp {
             season: seasonNum,
             episode: episode.episode,
         });
+    }
+
+    setupMovieMetadata(movie) {
+        // Show movie metadata, hide episode metadata
+        document.getElementById("movie-metadata").style.display = "block";
+        document.getElementById("episode-metadata").style.display = "none";
+
+        // Populate movie-specific fields
+        document.getElementById("media-year").textContent = movie.year || "Unknown";
+        document.getElementById("media-runtime").textContent = movie.runtime || "Unknown";
+        document.getElementById("media-quality").textContent = movie.quality || "Unknown";
+
+        // Clear and setup poster container
+        this.setupMediaPoster("media-poster-container");
+    }
+
+    setupEpisodeMetadata(show, seasonNum, episode) {
+        // Show episode metadata, hide movie metadata
+        document.getElementById("movie-metadata").style.display = "none";
+        document.getElementById("episode-metadata").style.display = "block";
+
+        // Populate episode-specific fields
+        document.getElementById("media-show-name").textContent = show.name || "Unknown Show";
+        document.getElementById("media-season").textContent = `Season ${seasonNum}`;
+        document.getElementById("media-episode-number").textContent = `Episode ${episode.episode}`;
+        document.getElementById("media-episode-title").textContent = episode.episodeTitle || "Unknown Episode";
+        document.getElementById("media-episode-runtime").textContent = episode.runtime || "Unknown";
+        document.getElementById("media-episode-quality").textContent = episode.quality || "Unknown";
+
+        // Clear and setup poster container
+        this.setupMediaPoster("media-poster-container");
+    }
+
+    setupMediaPoster(containerID) {
+        const posterContainer = document.getElementById(containerID);
+        if (posterContainer) {
+            posterContainer.innerHTML = ""; // Clear existing content
+        }
+    }
+
+    updateMediaBackButton(text) {
+        const backButton = document.getElementById("back-from-media-btn");
+        if (backButton) {
+            backButton.textContent = text;
+        }
     }
 
     getTVShowId(show) {
@@ -431,16 +474,6 @@ class MediaLibraryApp {
         }
 
         // Poster handling will be implemented later
-    }
-
-    updateEpisodeDescription(metadata) {
-        const descriptionParagraph = document.getElementById("episode-description");
-        
-        if (metadata && metadata.overview) {
-            descriptionParagraph.textContent = metadata.overview;
-        } else {
-            descriptionParagraph.textContent = "No description available for this episode.";
-        }
     }
 
     showMovieStatusBar() {
@@ -1817,10 +1850,9 @@ class MediaLibraryApp {
     }
 
     updateMovieDescription(metadata) {
-        // Find the description paragraph in the movie view
-        const descriptionParagraph =
-            document.getElementById("movie-description");
-        const posterContainer = document.getElementById("poster-container");
+        // Find the description paragraph in the unified media view
+        const descriptionParagraph = document.getElementById("media-description");
+        const posterContainer = document.getElementById("media-poster-container");
 
         if (metadata && metadata.results && metadata.results.length > 0) {
             // Get the first result from the API response
@@ -1830,8 +1862,7 @@ class MediaLibraryApp {
                 // Update with actual movie description
                 descriptionParagraph.textContent = movieData.overview;
             } else {
-                descriptionParagraph.textContent =
-                    "No description available for this movie.";
+                descriptionParagraph.textContent = "No description available for this movie.";
             }
 
             if (movieData.poster_path) {
@@ -1852,8 +1883,17 @@ class MediaLibraryApp {
             }
         } else {
             // Fallback if no results are available
-            descriptionParagraph.textContent =
-                "No description available for this movie.";
+            descriptionParagraph.textContent = "No description available for this movie.";
+        }
+    }
+
+    updateEpisodeDescription(metadata) {
+        const descriptionParagraph = document.getElementById("media-description");
+        
+        if (metadata && metadata.overview) {
+            descriptionParagraph.textContent = metadata.overview;
+        } else {
+            descriptionParagraph.textContent = "No description available for this episode.";
         }
     }
 
@@ -2923,21 +2963,33 @@ class MediaLibraryApp {
             "<p>Loading libraries...</p>";
     }
 
-    clearMoviePageContent() {
+    clearMediaPageContent() {
         this.stopPositionTracking();
-        this.stopStatusPolling(); // Already added
+        this.stopStatusPolling();
 
-        // Reset movie details
-        document.getElementById("movie-description").textContent = "Loading...";
-        document.getElementById("movie-title").textContent = "Movie Title";
-        document.getElementById("movie-year").textContent = "Unknown";
-        document.getElementById("movie-runtime").textContent = "Unknown";
-        document.getElementById("movie-quality").textContent = "Unknown";
-        document.getElementById("poster-container").innerHTML = "";
+        // Reset media details for both movies and episodes
+        document.getElementById("media-description").textContent = "Loading...";
+        document.getElementById("media-title").textContent = "Media Title";
+        
+        // Reset movie fields
+        document.getElementById("media-year").textContent = "Unknown";
+        document.getElementById("media-runtime").textContent = "Unknown";
+        document.getElementById("media-quality").textContent = "Unknown";
+        
+        // Reset episode fields  
+        document.getElementById("media-show-name").textContent = "Unknown";
+        document.getElementById("media-season").textContent = "Unknown";
+        document.getElementById("media-episode-number").textContent = "Unknown";
+        document.getElementById("media-episode-title").textContent = "Unknown";
+        document.getElementById("media-episode-runtime").textContent = "Unknown";
+        document.getElementById("media-episode-quality").textContent = "Unknown";
+        
+        // Clear poster
+        document.getElementById("media-poster-container").innerHTML = "";
 
         // Hide and reset status bar
-        this.hideMovieStatusBar(); // Already added
-        this.resetMovieStatusBar(); // Add this new method call
+        this.hideMovieStatusBar();
+        this.resetMovieStatusBar();
 
         // Clear video player
         if (this.hls) {
@@ -2953,9 +3005,6 @@ class MediaLibraryApp {
 
         this.hideVideoLoading();
         this.hidePlayButton();
-
-        const qualitySelector = document.getElementById("quality-selector");
-        if (qualitySelector) qualitySelector.style.display = "none";
 
         // Reset retry state
         this.resetRetryState();
@@ -3000,7 +3049,7 @@ class MediaLibraryApp {
         // Clear content sections
         clearLibrariesPageContent();
         clearLibraryPageContent();
-        clearMoviePageContent();
+        clearMediaPageContent();
         clearAccountContent();
         this.resetMovieStatusBar();
     }
