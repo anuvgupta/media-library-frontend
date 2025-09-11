@@ -102,14 +102,14 @@ class MediaLibraryApp {
                 this.showLibrariesView();
                 this.clearLibraryPageContent();
                 this.clearMediaPageContent();
-                this.updateMovieDescription();
+                this.updateMovieDescriptionAndYear();
             });
         // document
         //     .getElementById("back-to-library-btn")
         //     .addEventListener("click", () => {
         //         this.showLibraryView(this.currentLibraryOwner);
         //         this.clearMediaPageContent();
-        //         this.updateMovieDescription();
+        //         this.updateMovieDescriptionAndYear();
         //     });
 
         // Library sharing
@@ -1404,9 +1404,13 @@ class MediaLibraryApp {
                                 movie.name || "Unknown Title"
                             }</div>
                             <div class="movie-details">
-                                <p><strong>Year:</strong> ${
-                                    movie.year || "Unknown"
-                                }</p>
+                                
+                                ` +
+                                // <p><strong>Year:</strong> ${
+                                //     movie.year || "Unknown"
+                                // }</p>
+                                `
+
                                 <p><strong>Runtime:</strong> ${
                                     movie.runtime || "Unknown"
                                 }</p>
@@ -1414,7 +1418,7 @@ class MediaLibraryApp {
                                     movie.quality || "Unknown"
                                 }</p>
                                 ${
-                                    movie.collectionSize > 1
+                                    movie.collectionSize > 1 && movie.collection != "Uncategorized"
                                         ? `<p><strong>Collection:</strong> ${
                                               movie.collection || "Unknown"
                                           }</p>`
@@ -1820,11 +1824,11 @@ class MediaLibraryApp {
 
             const result = await response.json();
             console.log("Movie metadata:", result);
-            this.updateMovieDescription(result);
+            this.updateMovieDescriptionAndYear(result);
         } catch (error) {
             console.error("Error loading movie metadata:", error);
             this.showStatus("Error loading movie details: " + error.message);
-            this.updateMovieDescription(null);
+            this.updateMovieDescriptionAndYear(null);
         }
     }
 
@@ -1846,9 +1850,10 @@ class MediaLibraryApp {
         }
     }
 
-    updateMovieDescription(metadata) {
+    updateMovieDescriptionAndYear(metadata) {
         // Find the description paragraph in the unified media view
         const descriptionParagraph = document.getElementById("media-description");
+        const yearText = document.getElementById("media-year");
         const posterContainer = document.getElementById("media-poster-container");
 
         if (metadata && metadata.results && metadata.results.length > 0) {
@@ -1860,6 +1865,11 @@ class MediaLibraryApp {
                 descriptionParagraph.textContent = movieData.overview;
             } else {
                 descriptionParagraph.textContent = "No description available for this movie.";
+            }
+
+            if (movieData.release_date) {
+                const releaseYear = movieData.release_date.substring(0, 4) || "Unknown";
+                yearText.textContent = `${releaseYear}`;
             }
 
             if (movieData.poster_path) {
@@ -1881,6 +1891,7 @@ class MediaLibraryApp {
         } else {
             // Fallback if no results are available
             descriptionParagraph.textContent = "No description available for this movie.";
+            yearText.textContent = "Unknown";
         }
     }
 
