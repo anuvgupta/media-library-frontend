@@ -30,6 +30,9 @@ class MediaLibraryApp {
         };
         this.contentType = 'movies'; // 'movies' or 'tv'
         this.allTVShowsForSearch = [];
+        this.currentTVShow = null;
+        this.currentSeason = null;
+        this.currentEpisode = null;
 
         this.showStatusTimeout = null;
         this.lastSavedPosition = 0;
@@ -264,8 +267,150 @@ class MediaLibraryApp {
     }
 
     showTVShowView(show) {
-        console.log("TV Show view not implemented yet:", show);
-        this.showStatus("TV Show view coming soon!");
+        this.hideAllViews();
+        this.currentTVShow = show;
+        document.getElementById("tvshow-view").style.display = "block";
+        document.getElementById("tvshow-title").textContent = show.name || "Unknown Show";
+
+        this.updateAccountSection();
+
+        // Load TV show metadata
+        this.loadTVShowMetadata(show);
+
+        const showId = this.getTVShowId(show);
+        this.updateUrl("tvshow", {
+            libraryOwner: this.currentLibraryOwner,
+            showId: showId,
+        });
+
+        // Display seasons and episodes
+        this.displaySeasonsAndEpisodes(show);
+    }
+
+    showEpisodeView(show, seasonNum, episode) {
+        this.hideAllViews();
+        this.currentTVShow = show;
+        this.currentSeason = seasonNum;
+        this.currentEpisode = episode;
+        
+        document.getElementById("episode-view").style.display = "block";
+        
+        // Update episode title and info
+        const episodeTitle = `${show.name} - S${seasonNum.toString().padStart(2, '0')}E${episode.episode.toString().padStart(2, '0')} ${episode.episodeTitle || ''}`;
+        document.getElementById("episode-title").textContent = episodeTitle;
+
+        // Update episode details
+        document.getElementById("episode-show-name").textContent = show.name || "Unknown Show";
+        document.getElementById("episode-season").textContent = `Season ${seasonNum}`;
+        document.getElementById("episode-number").textContent = `Episode ${episode.episode}`;
+        document.getElementById("episode-episode-title").textContent = episode.episodeTitle || "Unknown Episode";
+        document.getElementById("episode-runtime").textContent = episode.runtime || "Unknown";
+        document.getElementById("episode-quality").textContent = episode.quality || "Unknown";
+
+        this.updateAccountSection();
+
+        // Load episode metadata
+        this.loadEpisodeMetadata(show, seasonNum, episode);
+
+        // Show play button instead of auto-loading video
+        this.showPlayButton();
+
+        const showId = this.getTVShowId(show);
+        this.updateUrl("episode", {
+            libraryOwner: this.currentLibraryOwner,
+            showId: showId,
+            season: seasonNum,
+            episode: episode.episode,
+        });
+    }
+
+    getTVShowId(show) {
+        // Use the show's category and name to create a unique ID
+        return utf8ToBase64(`${show.category}/${show.showId || show.name}`);
+    }
+
+    getEpisodeId(show, seasonNum, episode) {
+        return utf8ToBase64(this.getEpisodePathInLibrary(show, seasonNum, episode));
+    }
+
+    getEpisodePathInLibrary(show, seasonNum, episode) {
+        // Construct path based on the JSON structure
+        return `${show.path}/${episode.path}`;
+    }
+
+    displaySeasonsAndEpisodes(show) {
+        const container = document.getElementById("seasons-episodes-container");
+        
+        if (!show.seasons || Object.keys(show.seasons).length === 0) {
+            container.innerHTML = "<p>No seasons found for this show.</p>";
+            return;
+        }
+
+        const seasonsHtml = Object.keys(show.seasons)
+            .sort((a, b) => parseInt(a) - parseInt(b))
+            .map(seasonNum => {
+                const episodes = show.seasons[seasonNum];
+                const seasonNumber = parseInt(seasonNum);
+                
+                const episodesHtml = episodes
+                    .sort((a, b) => a.episode - b.episode)
+                    .map(episode => `
+                        <div class="episode-item" onclick="window.mediaLibraryApp.showEpisodeView(${JSON.stringify(show).replace(/"/g, "&quot;")}, ${seasonNumber}, ${JSON.stringify(episode).replace(/"/g, "&quot;")})">
+                            <div class="episode-number">E${episode.episode.toString().padStart(2, '0')}</div>
+                            <div class="episode-info">
+                                <div class="episode-title">${episode.episodeTitle || `Episode ${episode.episode}`}</div>
+                                <div class="episode-details">
+                                    <span>${episode.runtime || 'Unknown runtime'}</span>
+                                    <span>${episode.quality || 'Unknown quality'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                return `
+                    <div class="season-section">
+                        <h3 class="season-title">Season ${seasonNumber} (${episodes.length} episodes)</h3>
+                        <div class="episodes-list">
+                            ${episodesHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        container.innerHTML = seasonsHtml;
+    }
+
+    loadTVShowMetadata(show) {
+        // For now, just update with placeholder. Later we'll implement TMDB TV API calls
+        this.updateTVShowDescription(null);
+    }
+
+    loadEpisodeMetadata(show, seasonNum, episode) {
+        // For now, just update with placeholder. Later we'll implement TMDB TV API calls
+        this.updateEpisodeDescription(null);
+    }
+
+    updateTVShowDescription(metadata) {
+        const descriptionParagraph = document.getElementById("tvshow-description");
+        const posterContainer = document.getElementById("tvshow-poster-container");
+
+        if (metadata && metadata.overview) {
+            descriptionParagraph.textContent = metadata.overview;
+        } else {
+            descriptionParagraph.textContent = "No description available for this show.";
+        }
+
+        // Poster handling will be implemented later
+    }
+
+    updateEpisodeDescription(metadata) {
+        const descriptionParagraph = document.getElementById("episode-description");
+        
+        if (metadata && metadata.overview) {
+            descriptionParagraph.textContent = metadata.overview;
+        } else {
+            descriptionParagraph.textContent = "No description available for this episode.";
+        }
     }
 
     showMovieStatusBar() {
@@ -310,12 +455,14 @@ class MediaLibraryApp {
     hideAllViews() {
         const views = [
             "loading-view",
-            "signin-view",
+            "signin-view", 
             "signup-view",
             "verification-view",
             "libraries-view",
             "library-view",
             "movie-view",
+            "tvshow-view",
+            "episode-view",
         ];
         views.forEach((view) => {
             document.getElementById(view).style.display = "none";
@@ -988,7 +1135,6 @@ class MediaLibraryApp {
         Object.keys(moviesData).forEach((collection) => {
             const moviesInCollection = moviesData[collection];
             const collectionSize = moviesInCollection.length;
-            console.log(moviesInCollection);
 
             moviesInCollection.forEach((movie) => {
                 allMovies.push({
@@ -2846,7 +2992,7 @@ class MediaLibraryApp {
         url.searchParams.set("p", page);
 
         // Clear existing params and set new ones
-        ["l", "m"].forEach((param) => url.searchParams.delete(param));
+        ["l", "m", "s", "season", "episode"].forEach((param) => url.searchParams.delete(param));
 
         if (params.libraryOwner) {
             // Encode libraryOwner (identity ID) as base64
@@ -2855,6 +3001,15 @@ class MediaLibraryApp {
         }
         if (params.movieId) {
             url.searchParams.set("m", params.movieId);
+        }
+        if (params.showId) {
+            url.searchParams.set("s", params.showId);
+        }
+        if (params.season) {
+            url.searchParams.set("season", params.season);
+        }
+        if (params.episode) {
+            url.searchParams.set("episode", params.episode);
         }
 
         window.history.pushState(null, "", url.toString());
@@ -2869,11 +3024,7 @@ class MediaLibraryApp {
             try {
                 libraryOwner = base64ToUtf8(libraryOwner);
             } catch (error) {
-                console.warn(
-                    "Failed to decode libraryOwner from base64:",
-                    error
-                );
-                // Fall back to using the raw value if decoding fails
+                console.warn("Failed to decode libraryOwner from base64:", error);
             }
         }
 
@@ -2881,11 +3032,14 @@ class MediaLibraryApp {
             page: params.get("p"),
             libraryOwner: libraryOwner,
             movieId: params.get("m"),
+            showId: params.get("s"),
+            season: params.get("season") ? parseInt(params.get("season")) : null,
+            episode: params.get("episode") ? parseInt(params.get("episode")) : null,
         };
     }
 
     async navigateToPage(urlParams) {
-        const { page, libraryOwner, movieId } = urlParams;
+        const { page, libraryOwner, movieId, showId, season, episode } = urlParams;
 
         if (!this.currentUser) {
             this.showSigninView();
@@ -2918,11 +3072,128 @@ class MediaLibraryApp {
                     this.updateUrl("libraries");
                 }
                 break;
+            case "tvshow":
+                if (libraryOwner && showId) {
+                    await this.navigateToTVShow(libraryOwner, showId);
+                } else {
+                    this.showLibrariesView();
+                    this.updateUrl("libraries");
+                }
+                break;
+            case "episode":
+                if (libraryOwner && showId && season !== null && episode !== null) {
+                    await this.navigateToEpisode(libraryOwner, showId, season, episode);
+                } else {
+                    this.showLibrariesView();
+                    this.updateUrl("libraries");
+                }
+                break;
             case "libraries":
             default:
                 this.showLibrariesView();
                 this.updateUrl("libraries");
                 break;
+        }
+    }
+
+    async navigateToTVShow(libraryOwner, showId) {
+        try {
+            // Set the current library owner
+            this.currentLibraryOwner = libraryOwner;
+
+            // Check if we need to load library data
+            if (!this.currentLibraryData || this.currentLibraryOwner !== libraryOwner) {
+                console.log("Loading library data for TV show navigation...");
+                this.showLoadingView();
+
+                // Load the library data
+                const result = await this.makeAuthenticatedRequest("GET", `/libraries/${libraryOwner}/library`);
+                this.currentLibraryData = result;
+            }
+
+            // Find the TV show
+            const show = this.findTVShowById(showId);
+            if (show) {
+                this.showTVShowView(show);
+            } else {
+                console.warn("TV show not found with ID:", showId);
+                this.showLibraryView(libraryOwner);
+                this.showStatus("TV show not found, showing library instead");
+            }
+        } catch (error) {
+            console.error("Error navigating to TV show:", error);
+            this.handleNavigationError(error);
+        }
+    }
+
+    async navigateToEpisode(libraryOwner, showId, seasonNum, episodeNum) {
+        try {
+            // Set the current library owner
+            this.currentLibraryOwner = libraryOwner;
+
+            // Check if we need to load library data
+            if (!this.currentLibraryData || this.currentLibraryOwner !== libraryOwner) {
+                console.log("Loading library data for episode navigation...");
+                this.showLoadingView();
+
+                // Load the library data
+                const result = await this.makeAuthenticatedRequest("GET", `/libraries/${libraryOwner}/library`);
+                this.currentLibraryData = result;
+            }
+
+            // Find the TV show and episode
+            const show = this.findTVShowById(showId);
+            if (show && show.seasons && show.seasons[seasonNum]) {
+                const episode = show.seasons[seasonNum].find(ep => ep.episode === episodeNum);
+                if (episode) {
+                    this.showEpisodeView(show, seasonNum, episode);
+                } else {
+                    console.warn("Episode not found:", seasonNum, episodeNum);
+                    this.showTVShowView(show);
+                    this.showStatus("Episode not found, showing TV show instead");
+                }
+            } else {
+                console.warn("TV show or season not found:", showId, seasonNum);
+                this.showLibraryView(libraryOwner);
+                this.showStatus("TV show not found, showing library instead");
+            }
+        } catch (error) {
+            console.error("Error navigating to episode:", error);
+            this.handleNavigationError(error);
+        }
+    }
+
+    findTVShowById(showId) {
+        if (!this.currentLibraryData || !this.currentLibraryData.tv) return null;
+
+        for (const category of Object.keys(this.currentLibraryData.tv)) {
+            for (const showKey of Object.keys(this.currentLibraryData.tv[category])) {
+                const show = this.currentLibraryData.tv[category][showKey];
+                const currentShowId = this.getTVShowId({ ...show, category, showId: showKey });
+                if (currentShowId === showId) {
+                    return { ...show, category, showId: showKey };
+                }
+            }
+        }
+        return null;
+    }
+
+    handleNavigationError(error) {
+        if (error.statusCode === 403) {
+            this.showStatus("Access denied to this library");
+            this.showLibrariesView();
+            this.updateUrl("libraries");
+        } else if (error.statusCode === 404) {
+            this.showStatus("Library not found");
+            this.showLibrariesView();
+            this.updateUrl("libraries");
+        } else if (error.statusCode === 401) {
+            this.showStatus("Session expired. Please sign in again.");
+            this.handleLogout();
+        } else {
+            this.showStatus("Error loading content: " + (error.message || "Unknown error"));
+            this.showLibrariesView();
+            this.updateUrl("libraries");
         }
     }
 
