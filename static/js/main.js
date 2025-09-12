@@ -3284,10 +3284,13 @@ class MediaLibraryApp {
     }
 
     findMovieById(movieId) {
-        if (!this.currentLibraryData) return null;
+        if (!this.currentLibraryData || !this.currentLibraryData.movies) return null;
 
-        for (const collection of Object.keys(this.currentLibraryData)) {
-            const movie = this.currentLibraryData[collection].find(
+        // Only look in the movies section
+        const moviesData = this.currentLibraryData.movies;
+        
+        for (const collection of Object.keys(moviesData)) {
+            const movie = moviesData[collection].find(
                 (m) => this.getMovieId({ ...m, collection }) === movieId
             );
             if (movie) {
