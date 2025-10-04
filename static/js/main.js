@@ -1427,7 +1427,7 @@ class MediaLibraryApp {
         const firstEpisode = sortedEpisodes[0];
 
         // Construct the full path to the first episode
-        const fullPath = `${show.path}/${firstEpisode.path}`;
+        const fullPath = `${firstEpisode.path}`;
         return utf8ToBase64(fullPath);
     }
 
