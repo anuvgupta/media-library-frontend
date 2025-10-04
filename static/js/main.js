@@ -411,11 +411,6 @@ class MediaLibraryApp {
         }
     }
 
-    getTVShowId(show) {
-        // Use the show's category and name to create a unique ID
-        return utf8ToBase64(`${show.category}/${show.showId || show.name}`);
-    }
-
     getEpisodeId(show, seasonNum, episode) {
         return utf8ToBase64(
             this.getEpisodePathInLibrary(show, seasonNum, episode)
@@ -1409,7 +1404,7 @@ class MediaLibraryApp {
             .join("")}</div>`;
     }
 
-    getTVShowPosterId(show) {
+    getTVShowId(show) {
         // Get first season
         const seasonNumbers = Object.keys(show.seasons || {})
             .map((s) => parseInt(s))
@@ -1432,7 +1427,7 @@ class MediaLibraryApp {
     }
 
     getTVShowPosterUrls(show) {
-        const showPosterId = this.getTVShowPosterId(show);
+        const showPosterId = this.getTVShowId(show);
         if (!showPosterId) return { cdnPosterUrl: null, tmdbPosterUrl: null };
 
         const cdnPosterUrl = `/poster/${this.currentLibraryOwner}/poster_${showPosterId}.jpg`;
