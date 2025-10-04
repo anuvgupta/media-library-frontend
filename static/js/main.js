@@ -28,7 +28,7 @@ class MediaLibraryApp {
             phase: "initial", // 'initial', 'first_retry_cycle', 'second_retry_cycle', 'failed'
             isRetrying: false,
         };
-        this.contentType = 'movies'; // 'movies' or 'tv'
+        this.contentType = "movies"; // 'movies' or 'tv'
         this.allTVShowsForSearch = [];
         this.currentTVShow = null;
         this.currentSeason = null;
@@ -269,9 +269,10 @@ class MediaLibraryApp {
         this.currentTVShow = null; // Clear TV show context
         this.currentSeason = null;
         this.currentEpisode = null;
-        
+
         document.getElementById("media-view").style.display = "block";
-        document.getElementById("media-title").textContent = movie.name || "Unknown Title";
+        document.getElementById("media-title").textContent =
+            movie.name || "Unknown Title";
 
         // Set up movie-specific metadata
         this.setupMovieMetadata(movie);
@@ -297,7 +298,8 @@ class MediaLibraryApp {
         this.hideAllViews();
         this.currentTVShow = show;
         document.getElementById("tvshow-view").style.display = "block";
-        document.getElementById("tvshow-title").textContent = show.name || "Unknown Show";
+        document.getElementById("tvshow-title").textContent =
+            show.name || "Unknown Show";
 
         this.updateAccountSection();
 
@@ -320,11 +322,15 @@ class MediaLibraryApp {
         this.currentSeason = seasonNum;
         this.currentEpisode = episode;
         this.currentMovie = null; // Clear movie context
-        
+
         document.getElementById("media-view").style.display = "block";
-        
+
         // Update media title for episode
-        const episodeTitle = `${show.name} - S${seasonNum.toString().padStart(2, '0')}E${episode.episode.toString().padStart(2, '0')} ${episode.episodeTitle || ''}`;
+        const episodeTitle = `${show.name} - S${seasonNum
+            .toString()
+            .padStart(2, "0")}E${episode.episode.toString().padStart(2, "0")} ${
+            episode.episodeTitle || ""
+        }`;
         document.getElementById("media-title").textContent = episodeTitle;
 
         // Set up episode-specific metadata
@@ -355,9 +361,12 @@ class MediaLibraryApp {
         document.getElementById("episode-metadata").style.display = "none";
 
         // Populate movie-specific fields
-        document.getElementById("media-year").textContent = movie.year || "Unknown";
-        document.getElementById("media-runtime").textContent = movie.runtime || "Unknown";
-        document.getElementById("media-quality").textContent = movie.quality || "Unknown";
+        document.getElementById("media-year").textContent =
+            movie.year || "Unknown";
+        document.getElementById("media-runtime").textContent =
+            movie.runtime || "Unknown";
+        document.getElementById("media-quality").textContent =
+            movie.quality || "Unknown";
 
         // Clear and setup poster container
         this.setupMediaPoster("media-poster-container");
@@ -369,12 +378,20 @@ class MediaLibraryApp {
         document.getElementById("episode-metadata").style.display = "block";
 
         // Populate episode-specific fields
-        document.getElementById("media-show-name").textContent = show.name || "Unknown Show";
-        document.getElementById("media-season").textContent = `Season ${seasonNum}`;
-        document.getElementById("media-episode-number").textContent = `Episode ${episode.episode}`;
-        document.getElementById("media-episode-title").textContent = episode.episodeTitle || "Unknown Episode";
-        document.getElementById("media-episode-runtime").textContent = episode.runtime || "Unknown";
-        document.getElementById("media-episode-quality").textContent = episode.quality || "Unknown";
+        document.getElementById("media-show-name").textContent =
+            show.name || "Unknown Show";
+        document.getElementById(
+            "media-season"
+        ).textContent = `Season ${seasonNum}`;
+        document.getElementById(
+            "media-episode-number"
+        ).textContent = `Episode ${episode.episode}`;
+        document.getElementById("media-episode-title").textContent =
+            episode.episodeTitle || "Unknown Episode";
+        document.getElementById("media-episode-runtime").textContent =
+            episode.runtime || "Unknown";
+        document.getElementById("media-episode-quality").textContent =
+            episode.quality || "Unknown";
 
         // Clear and setup poster container
         this.setupMediaPoster("media-poster-container");
@@ -400,7 +417,9 @@ class MediaLibraryApp {
     }
 
     getEpisodeId(show, seasonNum, episode) {
-        return utf8ToBase64(this.getEpisodePathInLibrary(show, seasonNum, episode));
+        return utf8ToBase64(
+            this.getEpisodePathInLibrary(show, seasonNum, episode)
+        );
     }
 
     getEpisodePathInLibrary(show, seasonNum, episode) {
@@ -410,7 +429,7 @@ class MediaLibraryApp {
 
     displaySeasonsAndEpisodes(show) {
         const container = document.getElementById("seasons-episodes-container");
-        
+
         if (!show.seasons || Object.keys(show.seasons).length === 0) {
             container.innerHTML = "<p>No seasons found for this show.</p>";
             return;
@@ -418,24 +437,44 @@ class MediaLibraryApp {
 
         const seasonsHtml = Object.keys(show.seasons)
             .sort((a, b) => parseInt(a) - parseInt(b))
-            .map(seasonNum => {
+            .map((seasonNum) => {
                 const episodes = show.seasons[seasonNum];
                 const seasonNumber = parseInt(seasonNum);
-                
+
                 const episodesHtml = episodes
                     .sort((a, b) => a.episode - b.episode)
-                    .map(episode => `
-                        <div class="episode-item" onclick="window.mediaLibraryApp.showEpisodeView(${JSON.stringify(show).replace(/"/g, "&quot;")}, ${seasonNumber}, ${JSON.stringify(episode).replace(/"/g, "&quot;")})">
-                            <div class="episode-number">E${episode.episode.toString().padStart(2, '0')}</div>
+                    .map(
+                        (episode) => `
+                        <div class="episode-item" onclick="window.mediaLibraryApp.showEpisodeView(${JSON.stringify(
+                            show
+                        ).replace(
+                            /"/g,
+                            "&quot;"
+                        )}, ${seasonNumber}, ${JSON.stringify(episode).replace(
+                            /"/g,
+                            "&quot;"
+                        )})">
+                            <div class="episode-number">E${episode.episode
+                                .toString()
+                                .padStart(2, "0")}</div>
                             <div class="episode-info">
-                                <div class="episode-title">${episode.episodeTitle || `Episode ${episode.episode}`}</div>
+                                <div class="episode-title">${
+                                    episode.episodeTitle ||
+                                    `Episode ${episode.episode}`
+                                }</div>
                                 <div class="episode-details">
-                                    <span>${episode.runtime || 'Unknown runtime'}</span>
-                                    <span>${episode.quality || 'Unknown quality'}</span>
+                                    <span>${
+                                        episode.runtime || "Unknown runtime"
+                                    }</span>
+                                    <span>${
+                                        episode.quality || "Unknown quality"
+                                    }</span>
                                 </div>
                             </div>
                         </div>
-                    `).join('');
+                    `
+                    )
+                    .join("");
 
                 return `
                     <div class="season-section">
@@ -445,7 +484,8 @@ class MediaLibraryApp {
                         </div>
                     </div>
                 `;
-            }).join('');
+            })
+            .join("");
 
         container.innerHTML = seasonsHtml;
     }
@@ -461,13 +501,17 @@ class MediaLibraryApp {
     }
 
     updateTVShowDescription(metadata) {
-        const descriptionParagraph = document.getElementById("tvshow-description");
-        const posterContainer = document.getElementById("tvshow-poster-container");
+        const descriptionParagraph =
+            document.getElementById("tvshow-description");
+        const posterContainer = document.getElementById(
+            "tvshow-poster-container"
+        );
 
         if (metadata && metadata.overview) {
             descriptionParagraph.textContent = metadata.overview;
         } else {
-            descriptionParagraph.textContent = "No description available for this show.";
+            descriptionParagraph.textContent =
+                "No description available for this show.";
         }
 
         // Poster handling will be implemented later
@@ -515,7 +559,7 @@ class MediaLibraryApp {
     hideAllViews() {
         const views = [
             "loading-view",
-            "signin-view", 
+            "signin-view",
             "signup-view",
             "verification-view",
             "libraries-view",
@@ -1143,7 +1187,10 @@ class MediaLibraryApp {
     displayLibraryData() {
         const container = document.getElementById("library-content");
 
-        if (!this.currentLibraryData || Object.keys(this.currentLibraryData).length === 0) {
+        if (
+            !this.currentLibraryData ||
+            Object.keys(this.currentLibraryData).length === 0
+        ) {
             container.innerHTML = "<p>No content found in this library.</p>";
             return;
         }
@@ -1158,26 +1205,30 @@ class MediaLibraryApp {
         `;
 
         // Default to showing movies
-        this.contentType = 'movies';
+        this.contentType = "movies";
         this.showMoviesContent();
     }
 
     showMoviesContent() {
-        this.contentType = 'movies';
+        this.contentType = "movies";
         this.updateContentTabs();
         this.displayMoviesData();
     }
 
     showTVContent() {
-        this.contentType = 'tv';
+        this.contentType = "tv";
         this.updateContentTabs();
         this.displayTVData();
     }
 
     updateContentTabs() {
         // Update tab styling
-        document.getElementById('movies-tab').classList.toggle('active', this.contentType === 'movies');
-        document.getElementById('tv-tab').classList.toggle('active', this.contentType === 'tv');
+        document
+            .getElementById("movies-tab")
+            .classList.toggle("active", this.contentType === "movies");
+        document
+            .getElementById("tv-tab")
+            .classList.toggle("active", this.contentType === "tv");
     }
 
     displayMoviesData() {
@@ -1258,14 +1309,17 @@ class MediaLibraryApp {
             Object.keys(showsInCategory).forEach((showName) => {
                 const show = showsInCategory[showName];
                 const seasonCount = Object.keys(show.seasons || {}).length;
-                const totalEpisodes = Object.values(show.seasons || {}).reduce((total, episodes) => total + episodes.length, 0);
-                
+                const totalEpisodes = Object.values(show.seasons || {}).reduce(
+                    (total, episodes) => total + episodes.length,
+                    0
+                );
+
                 allTVShows.push({
                     ...show,
                     category,
                     seasonCount,
                     totalEpisodes,
-                    showId: showName // Use the key as the show ID
+                    showId: showName, // Use the key as the show ID
                 });
             });
         });
@@ -1315,23 +1369,37 @@ class MediaLibraryApp {
 
         return `<div class="movies-grid">${tvShows
             .map((show) => {
-                // For now, we'll use a placeholder for TV show posters
-                // You'll need to implement TV show poster logic later
-                const posterHtml = `<div style="width: 100%; height: 100%; background: var(--progress-bg); display: flex; align-items: center; justify-content: center; color: var(--status-text);">TV Show</div>`;
+                const posterUrls = this.getTVShowPosterUrls(show);
+                const posterHtml = this.renderPosterWithFallback(
+                    posterUrls,
+                    show.name
+                );
 
                 return `
                     <div class="movie-card">
-                        <div class="movie-poster" onclick="window.mediaLibraryApp.showTVShowView(${JSON.stringify(show).replace(/"/g, "&quot;")})">
+                        <div class="movie-poster" onclick="window.mediaLibraryApp.showTVShowView(${JSON.stringify(
+                            show
+                        ).replace(/"/g, "&quot;")})">
                             ${posterHtml}
                         </div>
                         <div class="movie-info">
-                            <div class="movie-title">${show.name || "Unknown Title"}</div>
+                            <div class="movie-title">${
+                                show.name || "Unknown Title"
+                            }</div>
                             <div class="movie-details">
-                                <p><strong>Seasons:</strong> ${show.seasonCount || 0}</p>
-                                <p><strong>Episodes:</strong> ${show.totalEpisodes || 0}</p>
-                                <p><strong>Category:</strong> ${show.category || "Unknown"}</p>
+                                <p><strong>Seasons:</strong> ${
+                                    show.seasonCount || 0
+                                }</p>
+                                <p><strong>Episodes:</strong> ${
+                                    show.totalEpisodes || 0
+                                }</p>
+                                <p><strong>Category:</strong> ${
+                                    show.category || "Unknown"
+                                }</p>
                             </div>
-                            <button class="movie-button" onclick="window.mediaLibraryApp.showTVShowView(${JSON.stringify(show).replace(/"/g, "&quot;")})">
+                            <button class="movie-button" onclick="window.mediaLibraryApp.showTVShowView(${JSON.stringify(
+                                show
+                            ).replace(/"/g, "&quot;")})">
                                 View Show
                             </button>
                         </div>
@@ -1339,6 +1407,41 @@ class MediaLibraryApp {
                 `;
             })
             .join("")}</div>`;
+    }
+
+    getTVShowPosterId(show) {
+        // Get first season
+        const seasonNumbers = Object.keys(show.seasons || {})
+            .map((s) => parseInt(s))
+            .sort((a, b) => a - b);
+        if (seasonNumbers.length === 0) return null;
+
+        const firstSeasonNum = seasonNumbers[0];
+        const episodes = show.seasons[firstSeasonNum];
+        if (!episodes || episodes.length === 0) return null;
+
+        // Get first episode
+        const sortedEpisodes = [...episodes].sort(
+            (a, b) => a.episode - b.episode
+        );
+        const firstEpisode = sortedEpisodes[0];
+
+        // Construct the full path to the first episode
+        const fullPath = `${show.path}/${firstEpisode.path}`;
+        return utf8ToBase64(fullPath);
+    }
+
+    getTVShowPosterUrls(show) {
+        const showPosterId = this.getTVShowPosterId(show);
+        if (!showPosterId) return { cdnPosterUrl: null, tmdbPosterUrl: null };
+
+        const cdnPosterUrl = `/poster/${this.currentLibraryOwner}/poster_${showPosterId}.jpg`;
+
+        const tmdbPosterUrl = show.poster_path
+            ? `${CONFIG.tmdbPosterUrlPrefix300}${show.poster_path}`
+            : null;
+
+        return { cdnPosterUrl, tmdbPosterUrl };
     }
 
     getMoviePosterUrls(movie) {
@@ -1354,26 +1457,24 @@ class MediaLibraryApp {
         return { cdnPosterUrl, tmdbPosterUrl };
     }
 
-    renderMoviePosterWithFallback(posterUrls, movieName) {
+    renderPosterWithFallback(posterUrls, mediaName) {
         const { cdnPosterUrl, tmdbPosterUrl } = posterUrls;
 
         if (cdnPosterUrl) {
             // Try CDN first, fallback to TMDB, then no poster
             if (tmdbPosterUrl) {
                 return `<img src="${cdnPosterUrl}" alt="${
-                    movieName || "Movie Poster"
+                    mediaName || "Poster"
                 }" 
                             onerror="this.src='${tmdbPosterUrl}'; this.onerror=function(){this.style.display='none';}">`;
             } else {
                 return `<img src="${cdnPosterUrl}" alt="${
-                    movieName || "Movie Poster"
+                    mediaName || "Poster"
                 }" 
                             onerror="this.style.display='none'">`;
             }
         } else if (tmdbPosterUrl) {
-            return `<img src="${tmdbPosterUrl}" alt="${
-                movieName || "Movie Poster"
-            }" 
+            return `<img src="${tmdbPosterUrl}" alt="${mediaName || "Poster"}" 
                         onerror="this.style.display='none'">`;
         } else {
             return `<div style="width: 100%; height: 100%; background: var(--progress-bg); display: flex; align-items: center; justify-content: center; color: var(--status-text);">No Poster</div>`;
@@ -1389,12 +1490,13 @@ class MediaLibraryApp {
             .map((movie, index) => {
                 const posterUrls = this.getMoviePosterUrls(movie);
 
-                return `
+                return (
+                    `
                     <div class="movie-card">
                         <div class="movie-poster" onclick="window.mediaLibraryApp.showMovieView(${JSON.stringify(
                             movie
                         ).replace(/"/g, "&quot;")})">
-                            ${this.renderMoviePosterWithFallback(
+                            ${this.renderPosterWithFallback(
                                 posterUrls,
                                 movie.name
                             )}
@@ -1406,10 +1508,10 @@ class MediaLibraryApp {
                             <div class="movie-details">
                                 
                                 ` +
-                                // <p><strong>Year:</strong> ${
-                                //     movie.year || "Unknown"
-                                // }</p>
-                                `
+                    // <p><strong>Year:</strong> ${
+                    //     movie.year || "Unknown"
+                    // }</p>
+                    `
 
                                 <p><strong>Runtime:</strong> ${
                                     movie.runtime || "Unknown"
@@ -1418,7 +1520,8 @@ class MediaLibraryApp {
                                     movie.quality || "Unknown"
                                 }</p>
                                 ${
-                                    movie.collectionSize > 1 && movie.collection != "Uncategorized"
+                                    movie.collectionSize > 1 &&
+                                    movie.collection != "Uncategorized"
                                         ? `<p><strong>Collection:</strong> ${
                                               movie.collection || "Unknown"
                                           }</p>`
@@ -1432,7 +1535,8 @@ class MediaLibraryApp {
                             </button>
                         </div>
                     </div>
-                `;
+                `
+                );
             })
             .join("")}</div>`;
     }
@@ -1505,9 +1609,9 @@ class MediaLibraryApp {
     }
 
     filterContent(searchTerm) {
-        if (this.contentType === 'movies') {
+        if (this.contentType === "movies") {
             this.filterMovies(searchTerm);
-        } else if (this.contentType === 'tv') {
+        } else if (this.contentType === "tv") {
             this.filterTVShows(searchTerm);
         }
     }
@@ -1852,9 +1956,12 @@ class MediaLibraryApp {
 
     updateMovieDescriptionAndYear(metadata) {
         // Find the description paragraph in the unified media view
-        const descriptionParagraph = document.getElementById("media-description");
+        const descriptionParagraph =
+            document.getElementById("media-description");
         const yearText = document.getElementById("media-year");
-        const posterContainer = document.getElementById("media-poster-container");
+        const posterContainer = document.getElementById(
+            "media-poster-container"
+        );
 
         if (metadata && metadata.results && metadata.results.length > 0) {
             // Get the first result from the API response
@@ -1864,11 +1971,13 @@ class MediaLibraryApp {
                 // Update with actual movie description
                 descriptionParagraph.textContent = movieData.overview;
             } else {
-                descriptionParagraph.textContent = "No description available for this movie.";
+                descriptionParagraph.textContent =
+                    "No description available for this movie.";
             }
 
             if (movieData.release_date) {
-                const releaseYear = movieData.release_date.substring(0, 4) || "Unknown";
+                const releaseYear =
+                    movieData.release_date.substring(0, 4) || "Unknown";
                 yearText.textContent = `${releaseYear}`;
             }
 
@@ -1890,18 +1999,21 @@ class MediaLibraryApp {
             }
         } else {
             // Fallback if no results are available
-            descriptionParagraph.textContent = "No description available for this movie.";
+            descriptionParagraph.textContent =
+                "No description available for this movie.";
             yearText.textContent = "Unknown";
         }
     }
 
     updateEpisodeDescription(metadata) {
-        const descriptionParagraph = document.getElementById("media-description");
-        
+        const descriptionParagraph =
+            document.getElementById("media-description");
+
         if (metadata && metadata.overview) {
             descriptionParagraph.textContent = metadata.overview;
         } else {
-            descriptionParagraph.textContent = "No description available for this episode.";
+            descriptionParagraph.textContent =
+                "No description available for this episode.";
         }
     }
 
@@ -2978,20 +3090,22 @@ class MediaLibraryApp {
         // Reset media details for both movies and episodes
         document.getElementById("media-description").textContent = "Loading...";
         document.getElementById("media-title").textContent = "Media Title";
-        
+
         // Reset movie fields
         document.getElementById("media-year").textContent = "Unknown";
         document.getElementById("media-runtime").textContent = "Unknown";
         document.getElementById("media-quality").textContent = "Unknown";
-        
-        // Reset episode fields  
+
+        // Reset episode fields
         document.getElementById("media-show-name").textContent = "Unknown";
         document.getElementById("media-season").textContent = "Unknown";
         document.getElementById("media-episode-number").textContent = "Unknown";
         document.getElementById("media-episode-title").textContent = "Unknown";
-        document.getElementById("media-episode-runtime").textContent = "Unknown";
-        document.getElementById("media-episode-quality").textContent = "Unknown";
-        
+        document.getElementById("media-episode-runtime").textContent =
+            "Unknown";
+        document.getElementById("media-episode-quality").textContent =
+            "Unknown";
+
         // Clear poster
         document.getElementById("media-poster-container").innerHTML = "";
 
@@ -3078,7 +3192,9 @@ class MediaLibraryApp {
         url.searchParams.set("p", page);
 
         // Clear existing params and set new ones
-        ["l", "m", "s", "season", "episode"].forEach((param) => url.searchParams.delete(param));
+        ["l", "m", "s", "season", "episode"].forEach((param) =>
+            url.searchParams.delete(param)
+        );
 
         if (params.libraryOwner) {
             // Encode libraryOwner (identity ID) as base64
@@ -3110,7 +3226,10 @@ class MediaLibraryApp {
             try {
                 libraryOwner = base64ToUtf8(libraryOwner);
             } catch (error) {
-                console.warn("Failed to decode libraryOwner from base64:", error);
+                console.warn(
+                    "Failed to decode libraryOwner from base64:",
+                    error
+                );
             }
         }
 
@@ -3119,13 +3238,18 @@ class MediaLibraryApp {
             libraryOwner: libraryOwner,
             movieId: params.get("m"),
             showId: params.get("s"),
-            season: params.get("season") ? parseInt(params.get("season")) : null,
-            episode: params.get("episode") ? parseInt(params.get("episode")) : null,
+            season: params.get("season")
+                ? parseInt(params.get("season"))
+                : null,
+            episode: params.get("episode")
+                ? parseInt(params.get("episode"))
+                : null,
         };
     }
 
     async navigateToPage(urlParams) {
-        const { page, libraryOwner, movieId, showId, season, episode } = urlParams;
+        const { page, libraryOwner, movieId, showId, season, episode } =
+            urlParams;
 
         if (!this.currentUser) {
             this.showSigninView();
@@ -3167,8 +3291,18 @@ class MediaLibraryApp {
                 }
                 break;
             case "episode":
-                if (libraryOwner && showId && season !== null && episode !== null) {
-                    await this.navigateToEpisode(libraryOwner, showId, season, episode);
+                if (
+                    libraryOwner &&
+                    showId &&
+                    season !== null &&
+                    episode !== null
+                ) {
+                    await this.navigateToEpisode(
+                        libraryOwner,
+                        showId,
+                        season,
+                        episode
+                    );
                 } else {
                     this.showLibrariesView();
                     this.updateUrl("libraries");
@@ -3188,12 +3322,18 @@ class MediaLibraryApp {
             this.currentLibraryOwner = libraryOwner;
 
             // Check if we need to load library data
-            if (!this.currentLibraryData || this.currentLibraryOwner !== libraryOwner) {
+            if (
+                !this.currentLibraryData ||
+                this.currentLibraryOwner !== libraryOwner
+            ) {
                 console.log("Loading library data for TV show navigation...");
                 this.showLoadingView();
 
                 // Load the library data
-                const result = await this.makeAuthenticatedRequest("GET", `/libraries/${libraryOwner}/library`);
+                const result = await this.makeAuthenticatedRequest(
+                    "GET",
+                    `/libraries/${libraryOwner}/library`
+                );
                 this.currentLibraryData = result;
             }
 
@@ -3218,25 +3358,35 @@ class MediaLibraryApp {
             this.currentLibraryOwner = libraryOwner;
 
             // Check if we need to load library data
-            if (!this.currentLibraryData || this.currentLibraryOwner !== libraryOwner) {
+            if (
+                !this.currentLibraryData ||
+                this.currentLibraryOwner !== libraryOwner
+            ) {
                 console.log("Loading library data for episode navigation...");
                 this.showLoadingView();
 
                 // Load the library data
-                const result = await this.makeAuthenticatedRequest("GET", `/libraries/${libraryOwner}/library`);
+                const result = await this.makeAuthenticatedRequest(
+                    "GET",
+                    `/libraries/${libraryOwner}/library`
+                );
                 this.currentLibraryData = result;
             }
 
             // Find the TV show and episode
             const show = this.findTVShowById(showId);
             if (show && show.seasons && show.seasons[seasonNum]) {
-                const episode = show.seasons[seasonNum].find(ep => ep.episode === episodeNum);
+                const episode = show.seasons[seasonNum].find(
+                    (ep) => ep.episode === episodeNum
+                );
                 if (episode) {
                     this.showEpisodeView(show, seasonNum, episode);
                 } else {
                     console.warn("Episode not found:", seasonNum, episodeNum);
                     this.showTVShowView(show);
-                    this.showStatus("Episode not found, showing TV show instead");
+                    this.showStatus(
+                        "Episode not found, showing TV show instead"
+                    );
                 }
             } else {
                 console.warn("TV show or season not found:", showId, seasonNum);
@@ -3250,12 +3400,19 @@ class MediaLibraryApp {
     }
 
     findTVShowById(showId) {
-        if (!this.currentLibraryData || !this.currentLibraryData.tv) return null;
+        if (!this.currentLibraryData || !this.currentLibraryData.tv)
+            return null;
 
         for (const category of Object.keys(this.currentLibraryData.tv)) {
-            for (const showKey of Object.keys(this.currentLibraryData.tv[category])) {
+            for (const showKey of Object.keys(
+                this.currentLibraryData.tv[category]
+            )) {
                 const show = this.currentLibraryData.tv[category][showKey];
-                const currentShowId = this.getTVShowId({ ...show, category, showId: showKey });
+                const currentShowId = this.getTVShowId({
+                    ...show,
+                    category,
+                    showId: showKey,
+                });
                 if (currentShowId === showId) {
                     return { ...show, category, showId: showKey };
                 }
@@ -3277,18 +3434,21 @@ class MediaLibraryApp {
             this.showStatus("Session expired. Please sign in again.");
             this.handleLogout();
         } else {
-            this.showStatus("Error loading content: " + (error.message || "Unknown error"));
+            this.showStatus(
+                "Error loading content: " + (error.message || "Unknown error")
+            );
             this.showLibrariesView();
             this.updateUrl("libraries");
         }
     }
 
     findMovieById(movieId) {
-        if (!this.currentLibraryData || !this.currentLibraryData.movies) return null;
+        if (!this.currentLibraryData || !this.currentLibraryData.movies)
+            return null;
 
         // Only look in the movies section
         const moviesData = this.currentLibraryData.movies;
-        
+
         for (const collection of Object.keys(moviesData)) {
             const movie = moviesData[collection].find(
                 (m) => this.getMovieId({ ...m, collection }) === movieId
