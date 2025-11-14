@@ -551,12 +551,27 @@ class MediaLibraryApp {
 
         if (metadata && metadata.overview) {
             descriptionParagraph.textContent = metadata.overview;
+
+            if (metadata.poster_path) {
+                // Clear any existing content in the poster container
+                posterContainer.innerHTML = "";
+
+                // Create the image element
+                const posterImg = document.createElement("img");
+                posterImg.src = `${CONFIG.tmdbPosterUrlPrefix500}${metadata.poster_path}`;
+                posterImg.alt = metadata.name || "TV Show Poster";
+                posterImg.style.width = "100%";
+                posterImg.style.height = "auto";
+                posterImg.style.objectFit = "contain";
+                posterImg.style.borderRadius = "4px";
+
+                // Append the image to the poster container
+                posterContainer.appendChild(posterImg);
+            }
         } else {
             descriptionParagraph.textContent =
                 "No description available for this show.";
         }
-
-        // Poster handling will be implemented later
     }
 
     showMovieStatusBar() {
