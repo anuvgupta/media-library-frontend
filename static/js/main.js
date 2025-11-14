@@ -485,9 +485,56 @@ class MediaLibraryApp {
         container.innerHTML = seasonsHtml;
     }
 
-    loadTVShowMetadata(show) {
-        // For now, just update with placeholder. Later we'll implement TMDB TV API calls
-        this.updateTVShowDescription(null);
+    async loadTVShowMetadata(show) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (show.name) {
+                // Re-use the same cleaner we use for movies
+                const cleanedTitle = this.cleanMovieTitleForSearch(show.name);
+                queryParams.append("query", cleanedTitle);
+            }
+
+            // If you have a year/first-air-year on the show object, pass it through
+            if (show.year) {
+                queryParams.append("year", show.year);
+            }
+
+            // Call TV metadata endpoint (adjust path if your API uses a different route)
+            const response = await fetch(
+                `${CONFIG.apiEndpoint}/metadata/tv?${queryParams.toString()}`
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}: ${await response.text()}`
+                );
+            }
+
+            const result = await response.json();
+            console.log("TV show metadata:", result);
+
+            // Some backends return { results: [...] }, some return a single object.
+            let tvData = result;
+            if (
+                result &&
+                Array.isArray(result.results) &&
+                result.results.length > 0
+            ) {
+                tvData = result.results[0];
+            }
+
+            // Persist poster_path on the show object so poster helpers can use it
+            if (tvData && tvData.poster_path && !show.poster_path) {
+                show.poster_path = tvData.poster_path;
+            }
+
+            this.updateTVShowDescription(tvData);
+        } catch (error) {
+            console.error("Error loading TV show metadata:", error);
+            this.showStatus("Error loading TV show details: " + error.message);
+            this.updateTVShowDescription(null);
+        }
     }
 
     loadEpisodeMetadata(show, seasonNum, episode) {
