@@ -280,7 +280,7 @@
                 <br />
             </div>
         </div>
-        
+
         <!-- TV Show View -->
         <div id="tvshow-view" style="display: none">
             <!-- Account Section -->
@@ -294,7 +294,9 @@
 
             <br />
 
-            <button id="back-to-library-from-tvshow-btn">← Back to Library</button>
+            <button id="back-to-library-from-tvshow-btn">
+                ← Back to Library
+            </button>
 
             <div class="section-spacer"></div>
 
@@ -311,6 +313,12 @@
                 <div id="tvshow-details-container" style="margin-bottom: 20px">
                     <div id="tvshow-poster-container"></div>
                     <div id="tvshow-details-content">
+                        <div>
+                            <p>
+                                <strong>Year:</strong>
+                                <span id="tvshow-year">Unknown</span>
+                            </p>
+                        </div>
                         <div>
                             <strong>Description:</strong>
                             <p id="tvshow-description">Loading...</p>
@@ -514,7 +522,9 @@
                 >
                     <div class="status-content">
                         <div class="status-text">
-                            <span id="status-message-text">Processing media...</span>
+                            <span id="status-message-text"
+                                >Processing media...</span
+                            >
                             <span id="status-percentage">0%</span>
                         </div>
                         <div class="status-progress-bar">
@@ -536,20 +546,47 @@
                     <div id="media-poster-container"></div>
                     <div id="media-details-content">
                         <!-- Movie-specific fields -->
-                        <div id="movie-metadata" style="display: none;">
-                            <p><strong>Year:</strong> <span id="media-year">Unknown</span></p>
-                            <p><strong>Runtime:</strong> <span id="media-runtime">Unknown</span></p>
-                            <p><strong>Quality:</strong> <span id="media-quality">Unknown</span></p>
+                        <div id="movie-metadata" style="display: none">
+                            <p>
+                                <strong>Year:</strong>
+                                <span id="media-year">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Runtime:</strong>
+                                <span id="media-runtime">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Quality:</strong>
+                                <span id="media-quality">Unknown</span>
+                            </p>
                         </div>
 
                         <!-- Episode-specific fields -->
-                        <div id="episode-metadata" style="display: none;">
-                            <p><strong>Show:</strong> <span id="media-show-name">Unknown</span></p>
-                            <p><strong>Season:</strong> <span id="media-season">Unknown</span></p>
-                            <p><strong>Episode:</strong> <span id="media-episode-number">Unknown</span></p>
-                            <p><strong>Episode Title:</strong> <span id="media-episode-title">Unknown</span></p>
-                            <p><strong>Runtime:</strong> <span id="media-episode-runtime">Unknown</span></p>
-                            <p><strong>Quality:</strong> <span id="media-episode-quality">Unknown</span></p>
+                        <div id="episode-metadata" style="display: none">
+                            <p>
+                                <strong>Show:</strong>
+                                <span id="media-show-name">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Season:</strong>
+                                <span id="media-season">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Episode:</strong>
+                                <span id="media-episode-number">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Episode Title:</strong>
+                                <span id="media-episode-title">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Runtime:</strong>
+                                <span id="media-episode-runtime">Unknown</span>
+                            </p>
+                            <p>
+                                <strong>Quality:</strong>
+                                <span id="media-episode-quality">Unknown</span>
+                            </p>
                         </div>
 
                         <!-- Description Section (shared) -->

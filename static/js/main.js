@@ -545,12 +545,19 @@ class MediaLibraryApp {
     updateTVShowDescription(metadata) {
         const descriptionParagraph =
             document.getElementById("tvshow-description");
+        const yearText = document.getElementById("tvshow-year");
         const posterContainer = document.getElementById(
             "tvshow-poster-container"
         );
 
         if (metadata && metadata.overview) {
             descriptionParagraph.textContent = metadata.overview;
+
+            if (metadata.first_air_date) {
+                const releaseYear =
+                    metadata.first_air_date.substring(0, 4) || "Unknown";
+                yearText.textContent = `${releaseYear}`;
+            }
 
             if (metadata.poster_path) {
                 // Clear any existing content in the poster container
