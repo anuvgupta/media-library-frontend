@@ -650,7 +650,7 @@ class MediaLibraryApp {
         if (!messageEl || !percentageEl || !progressFillEl) return;
 
         // Reset all status bar content to default values
-        messageEl.textContent = "Processing movie...";
+        messageEl.textContent = "Processing video...";
         percentageEl.textContent = "0%";
         progressFillEl.style.width = "0%";
         etaEl.textContent = "";
