@@ -482,7 +482,7 @@ class MediaLibraryApp {
 
     getEpisodePathInLibrary(show, seasonNum, episode) {
         // Construct path based on the JSON structure
-        return `${show.path}/${episode.path}`;
+        return `${episode.path}`;
     }
 
     displaySeasonsAndEpisodes(show) {
