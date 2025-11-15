@@ -54,6 +54,43 @@ class MediaLibraryApp {
         });
     }
 
+    getCurrentMediaType() {
+        if (this.currentEpisode) {
+            return "episode";
+        } else if (this.currentMovie) {
+            return "movie";
+        }
+        return null;
+    }
+
+    getCurrentMedia() {
+        if (this.currentEpisode) {
+            return {
+                media: this.currentEpisode,
+                show: this.currentTVShow,
+                season: this.currentSeason,
+            };
+        } else if (this.currentMovie) {
+            return {
+                media: this.currentMovie,
+            };
+        }
+        return null;
+    }
+
+    getMediaId(mediaType) {
+        if (mediaType === "movie") {
+            return this.getMovieId(this.currentMovie);
+        } else if (mediaType === "episode") {
+            return this.getEpisodeId(
+                this.currentTVShow,
+                this.currentSeason,
+                this.currentEpisode
+            );
+        }
+        throw new Error("Invalid media type");
+    }
+
     initializeEventListeners() {
         // Auth buttons
         document
@@ -174,7 +211,7 @@ class MediaLibraryApp {
         return saved ? parseFloat(saved) : 0;
     }
 
-    startPositionTracking(movieId) {
+    startPositionTracking(mediaId) {
         this.stopPositionTracking(); // Clear any existing interval
 
         this.positionSaveInterval = setInterval(() => {
@@ -183,12 +220,12 @@ class MediaLibraryApp {
                 // Only save if position changed significantly (avoid excessive saves)
                 if (Math.abs(video.currentTime - this.lastSavedPosition) > 5) {
                     console.log(
-                        `Saving position as ${video.currentTime} for movie ${movieId}`
+                        `Saving position as ${video.currentTime} for media ${mediaId}`
                     );
-                    this.savePlaybackPosition(movieId, video.currentTime);
+                    this.savePlaybackPosition(mediaId, video.currentTime);
                 }
             }
-        }, this.positionSaveInterval); // Save every 30 seconds
+        }, 20000); // Save every 20 seconds
     }
 
     stopPositionTracking() {
@@ -2007,14 +2044,14 @@ class MediaLibraryApp {
         }
     }
 
-    async loadMovieSubtitles(movie) {
+    async loadMediaSubtitles(mediaType) {
         try {
-            const movieId = this.getMovieId(movie);
+            const mediaId = this.getMediaId(mediaType);
             const ownerIdentityId = this.currentLibraryOwner;
 
             const response = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerIdentityId}/movies/${movieId}/subtitles`
+                `/libraries/${ownerIdentityId}/media/${mediaId}/subtitles?mediaType=${mediaType}`
             );
 
             console.log("Loaded subtitles:", response.subtitles);
@@ -2225,21 +2262,28 @@ class MediaLibraryApp {
 
     onPlayButtonClick() {
         this.hidePlayButton();
-        this.initializeVideoPlayer(this.currentMovie);
+        this.initializeVideoPlayer();
     }
 
-    async getMovieStreamUrl(movie) {
-        if (!movie.videoFile) {
-            throw new Error("No video file specified for this movie");
-        }
-
-        const movieId = this.getMovieId(movie);
+    async getMediaStreamUrl(mediaType) {
+        const mediaId = this.getMediaId(mediaType);
         const ownerIdentityId = this.currentLibraryOwner;
+
+        // Validate that we have the required video file
+        if (mediaType === "movie") {
+            if (!this.currentMovie.videoFile) {
+                throw new Error("No video file specified for this movie");
+            }
+        } else if (mediaType === "episode") {
+            if (!this.currentEpisode.episodeFile) {
+                throw new Error("No video file specified for this episode");
+            }
+        }
 
         try {
             const apiResponse = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerIdentityId}/movies/${movieId}/playlist`
+                `/libraries/${ownerIdentityId}/media/${mediaId}/playlist?mediaType=${mediaType}`
             );
 
             // Extract the pre-signed URL from the response
@@ -2250,23 +2294,28 @@ class MediaLibraryApp {
         }
     }
 
-    async initializeVideoPlayer(movie) {
+    async initializeVideoPlayer() {
         this.stopPositionTracking();
-        this.showVideoLoading("Loading movie...");
+
+        const mediaType = this.getCurrentMediaType();
+        const loadingText =
+            mediaType === "movie" ? "Loading movie..." : "Loading episode...";
+        this.showVideoLoading(loadingText);
 
         try {
-            const playlistUrl = await this.getMovieStreamUrlWithRetry(movie);
+            const playlistUrl = await this.getMediaStreamUrlWithRetry(
+                mediaType
+            );
             if (playlistUrl) {
                 this.playlistUrl = playlistUrl;
-                // const playlistBlobUrl = this.createPlaylistBlobUrl(playlistText);
 
                 // Load subtitles
-                const subtitles = await this.loadMovieSubtitles(movie);
+                const subtitles = await this.loadMediaSubtitles(mediaType);
 
                 this.setupHLSPlayer(this.playlistUrl, false, subtitles);
             } else {
                 console.log(
-                    "getMovieStreamUrlWithRetry returned empty, will initialize video player later"
+                    "getMediaStreamUrlWithRetry returned empty, will initialize video player later"
                 );
             }
         } catch (error) {
@@ -2285,13 +2334,14 @@ class MediaLibraryApp {
         return utf8ToBase64(this.getMoviePathInLibrary(movie));
     }
 
-    async getMovieStreamUrlWithRetry(movie) {
-        const movieId = this.getMovieId(movie);
+    async getMediaStreamUrlWithRetry(mediaType) {
+        const mediaId = this.getMediaId(mediaType);
         const ownerIdentityId = this.currentLibraryOwner;
+        const mediaLabel = mediaType === "movie" ? "movie" : "episode";
 
         try {
             // Single attempt to get stream URL
-            return await this.getMovieStreamUrl(movie);
+            return await this.getMediaStreamUrl(mediaType);
         } catch (error) {
             console.log(
                 "Stream URL not ready, requesting processing:",
@@ -2299,25 +2349,25 @@ class MediaLibraryApp {
             );
 
             // Request processing
-            this.showVideoLoading("Waiting for movie...");
+            this.showVideoLoading(`Waiting for ${mediaLabel}...`);
 
             try {
                 await this.makeAuthenticatedRequest(
                     "POST",
-                    `/libraries/${ownerIdentityId}/movies/${movieId}/request`
+                    `/libraries/${ownerIdentityId}/media/${mediaId}/request?mediaType=${mediaType}`
                 );
                 console.log("Processing request sent");
 
                 // Show status bar and start polling
                 this.showMovieStatusBar();
-                this.pollMovieStatus(movie);
-                this.showStatus("Waiting for movie");
+                this.pollMediaStatus(mediaType);
+                this.showStatus(`Waiting for ${mediaLabel}`);
             } catch (requestError) {
                 console.warn(
                     "Failed to send processing request:",
                     requestError
                 );
-                throw new Error("Failed to start movie processing");
+                throw new Error(`Failed to start ${mediaLabel} processing`);
             }
 
             // Return null - status polling will handle the rest
@@ -2395,7 +2445,8 @@ class MediaLibraryApp {
                 // Reset retry state after successful manifest parsing
                 this.resetRetryState();
 
-                const movieId = this.getMovieId(this.currentMovie);
+                const mediaType = this.getCurrentMediaType();
+                const mediaId = this.getMediaId(mediaType);
 
                 setTimeout(() => {
                     if (isRecovery) {
@@ -2406,7 +2457,7 @@ class MediaLibraryApp {
                     } else {
                         // Check for saved position
                         const savedPosition =
-                            this.getSavedPlaybackPosition(movieId);
+                            this.getSavedPlaybackPosition(mediaId);
                         video.currentTime = savedPosition;
                         video.play().catch((error) => {
                             console.warn("Autoplay failed:", error);
@@ -2414,7 +2465,7 @@ class MediaLibraryApp {
                     }
 
                     // Start position tracking
-                    this.startPositionTracking(movieId);
+                    this.startPositionTracking(mediaId);
                 }, 100);
             });
 
@@ -2433,23 +2484,24 @@ class MediaLibraryApp {
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
             video.src = streamUrl;
 
-            const movieId = this.getMovieId(this.currentMovie);
+            const mediaType = this.getCurrentMediaType();
+            const mediaId = this.getMediaId(mediaType);
 
             if (!isRecovery) {
                 video.addEventListener(
                     "loadedmetadata",
                     () => {
                         const savedPosition =
-                            this.getSavedPlaybackPosition(movieId);
+                            this.getSavedPlaybackPosition(mediaId);
                         video.currentTime = savedPosition;
                         this.hideVideoLoading();
-                        this.startPositionTracking(movieId);
+                        this.startPositionTracking(mediaId);
                     },
                     { once: true }
                 );
             } else {
                 this.hideVideoLoading();
-                this.startPositionTracking(movieId);
+                this.startPositionTracking(mediaId);
             }
 
             // For native HLS support (Safari), start playing automatically
@@ -2585,11 +2637,11 @@ class MediaLibraryApp {
         // Setup subtitle track selector
         this.updateSubtitleTrackSelector(subtitles);
 
-        // // Auto-select English track if available, otherwise select first track
-        // const defaultTrack = englishIndex !== -1 ? englishIndex : 0;
-        // this.selectedSubtitleTrack = defaultTrack;
-        const movieId = this.getMovieId(this.currentMovie);
-        const savedTrack = this.getSavedSubtitleTrack(movieId);
+        // Get media ID (works for both movies and episodes)
+        const mediaType = this.getCurrentMediaType();
+        const mediaId = this.getMediaId(mediaType);
+        const savedTrack = this.getSavedSubtitleTrack(mediaId);
+
         let selectedTrack;
         if (
             savedTrack !== null &&
@@ -2616,7 +2668,7 @@ class MediaLibraryApp {
             // Load saved offset for the selected track
             const savedOffset =
                 localStorage.getItem(
-                    `subtitleOffset_${movieId}_${selectedTrack}`
+                    `subtitleOffset_${mediaId}_${selectedTrack}`
                 ) || 0;
             const offset = parseFloat(savedOffset);
             this.subtitleOffsets[selectedTrack] = offset;
@@ -2631,13 +2683,14 @@ class MediaLibraryApp {
         const resetBtn = document.getElementById("reset-subtitle-offset");
         const trackSelect = document.getElementById("subtitle-track-select");
 
-        // Load saved offset for this movie and current track
-        const movieId = this.getMovieId(this.currentMovie);
+        // Load saved offset for this media and current track
+        const mediaType = this.getCurrentMediaType();
+        const mediaId = this.getMediaId(mediaType);
         const currentTrack = this.selectedSubtitleTrack;
         if (currentTrack >= 0) {
             const savedOffset =
                 localStorage.getItem(
-                    `subtitleOffset_${movieId}_${currentTrack}`
+                    `subtitleOffset_${mediaId}_${currentTrack}`
                 ) || 0;
             offsetInput.value = savedOffset;
             // Also ensure the offset is stored in the offsets object
@@ -2649,8 +2702,8 @@ class MediaLibraryApp {
             const trackIndex = parseInt(e.target.value);
             this.selectedSubtitleTrack = trackIndex;
 
-            // Save the selected track for this movie
-            this.saveSelectedSubtitleTrack(movieId, trackIndex);
+            // Save the selected track for this media
+            this.saveSelectedSubtitleTrack(mediaId, trackIndex);
 
             console.log(`🎬 Switching to subtitle track: ${trackIndex}`);
 
@@ -2660,7 +2713,7 @@ class MediaLibraryApp {
                 // Update offset input with saved offset for this track
                 const savedOffset =
                     localStorage.getItem(
-                        `subtitleOffset_${movieId}_${trackIndex}`
+                        `subtitleOffset_${mediaId}_${trackIndex}`
                     ) || 0;
                 const offset = parseFloat(savedOffset);
                 this.subtitleOffsets[trackIndex] = offset;
@@ -2691,7 +2744,7 @@ class MediaLibraryApp {
 
                     // Save offset preference
                     localStorage.setItem(
-                        `subtitleOffset_${movieId}_${selectedTrack}`,
+                        `subtitleOffset_${mediaId}_${selectedTrack}`,
                         offset.toString()
                     );
 
@@ -2727,7 +2780,7 @@ class MediaLibraryApp {
                     offsetInput.value = "0";
                     this.subtitleOffsets[selectedTrack] = 0;
                     localStorage.removeItem(
-                        `subtitleOffset_${movieId}_${selectedTrack}`
+                        `subtitleOffset_${mediaId}_${selectedTrack}`
                     );
 
                     // Reload track with no offset
@@ -3031,25 +3084,29 @@ class MediaLibraryApp {
         }
 
         try {
-            const movieId = this.getMovieId(this.currentMovie);
+            const mediaType = this.getCurrentMediaType();
+            const mediaId = this.getMediaId(mediaType);
             const ownerIdentityId = this.currentLibraryOwner;
+            const mediaLabel = mediaType === "movie" ? "movie" : "episode";
 
             console.log(
-                "Requesting movie re-processing due to stream error:",
+                `Requesting ${mediaLabel} re-processing due to stream error:`,
                 errorData.details
             );
 
             await this.makeAuthenticatedRequest(
                 "POST",
-                `/libraries/${ownerIdentityId}/movies/${movieId}/request`
+                `/libraries/${ownerIdentityId}/media/${mediaId}/request?mediaType=${mediaType}`
             );
 
-            this.showStatus("Stream error occurred. Re-processing movie...");
-            this.showVideoLoading("Waiting for movie...");
+            this.showStatus(
+                `Stream error occurred. Re-processing ${mediaLabel}...`
+            );
+            this.showVideoLoading(`Waiting for ${mediaLabel}...`);
 
             // Show status bar and start polling for recovery
             this.showMovieStatusBar();
-            this.pollMovieStatus(this.currentMovie);
+            this.pollMediaStatus(mediaType);
         } catch (requestError) {
             console.error("Failed to request re-processing:", requestError);
             this.retryState.isRetrying = false;
@@ -3570,7 +3627,7 @@ class MediaLibraryApp {
         }
     }
 
-    updateMovieStatusBar(statusData) {
+    updateMediaStatusBar(statusData, mediaType = null) {
         const messageEl = document.getElementById("status-message-text");
         const percentageEl = document.getElementById("status-percentage");
         const progressFillEl = document.getElementById("status-progress-fill");
@@ -3579,6 +3636,11 @@ class MediaLibraryApp {
         const statusBar = document.getElementById("movie-status-bar");
 
         if (!messageEl || !percentageEl || !progressFillEl) return;
+
+        // Determine media type if not provided
+        if (!mediaType) {
+            mediaType = this.getCurrentMediaType() || "movie";
+        }
 
         // Update message - use custom message if provided, otherwise use default
         let displayMessage = statusData.message;
@@ -3590,9 +3652,12 @@ class MediaLibraryApp {
                 displayMessage =
                     statusData.percentage === 40
                         ? "Stream preview ready"
-                        : "Streaming rest of movie";
+                        : `Streaming rest of ${mediaType}`;
             } else {
-                displayMessage = this.getStatusMessage(statusData.stageName);
+                displayMessage = this.getStatusMessage(
+                    statusData.stageName,
+                    mediaType
+                );
             }
         }
         messageEl.textContent = displayMessage;
@@ -3691,12 +3756,13 @@ class MediaLibraryApp {
         }
     }
 
-    getStatusMessage(stageName) {
+    getStatusMessage(stageName, mediaType = "movie") {
+        const mediaLabel = mediaType === "movie" ? "movie" : "episode";
         const messages = {
-            starting: "Processing movie",
-            reencoding: "Encoding movie",
+            starting: `Processing ${mediaLabel}`,
+            reencoding: `Encoding ${mediaLabel}`,
             converting_hls: "Converting to stream",
-            uploading: "Streaming movie",
+            uploading: `Streaming ${mediaLabel}`,
             completed: "Ready to watch",
             failed: "Processing failed",
         };
@@ -3715,28 +3781,29 @@ class MediaLibraryApp {
         return stages[stageName] || stageName;
     }
 
-    async pollMovieStatus(movie) {
+    async pollMediaStatus(mediaType) {
         if (this.isPollingStatus) {
             console.log("Status polling already active");
             return;
         }
 
         this.isPollingStatus = true;
-        const movieId = this.getMovieId(movie);
+        const mediaId = this.getMediaId(mediaType);
         const ownerIdentityId = this.currentLibraryOwner;
+        const mediaLabel = mediaType === "movie" ? "movie" : "episode";
 
-        console.log(`Starting status polling for movie: ${movieId}`);
+        console.log(`Starting status polling for ${mediaLabel}: ${mediaId}`);
 
         this.statusPollingInterval = setInterval(async () => {
             try {
                 const statusResponse = await this.makeAuthenticatedRequest(
                     "GET",
-                    `/libraries/${ownerIdentityId}/movies/${movieId}/status`
+                    `/libraries/${ownerIdentityId}/media/${mediaId}/status?mediaType=${mediaType}`
                 );
 
                 this.lastStatusResponse = statusResponse;
                 console.log("Status update:", statusResponse);
-                this.updateMovieStatusBar(statusResponse);
+                this.updateMediaStatusBar(statusResponse, mediaType);
 
                 // Check if streaming is ready (40% progress)
                 if (
@@ -3749,14 +3816,13 @@ class MediaLibraryApp {
                         console.log(
                             "Stream ready for recovery, reloading player..."
                         );
-                        await this.recoverStream(movie);
+                        await this.recoverStream(mediaType);
                     } else if (!this.playlistUrl) {
                         // Handle initial load
                         console.log(
                             "Stream ready for initial load, starting player..."
                         );
-                        // this.savePlaybackPosition(movieId, 0);
-                        await this.initializeVideoPlayer(movie);
+                        await this.initializeVideoPlayer();
                     }
                 }
 
@@ -3773,7 +3839,7 @@ class MediaLibraryApp {
                     }
                 }
             } catch (error) {
-                console.warn("Failed to get movie status:", error);
+                console.warn(`Failed to get ${mediaLabel} status:`, error);
 
                 if (error.statusCode === 403 || error.statusCode === 401) {
                     this.stopStatusPolling();
@@ -3783,14 +3849,14 @@ class MediaLibraryApp {
         }, 8000);
     }
 
-    async recoverStream(movie) {
+    async recoverStream(mediaType) {
         try {
             console.log("Recovering stream...");
-            const playlistUrl = await this.getMovieStreamUrl(movie);
+            const playlistUrl = await this.getMediaStreamUrl(mediaType);
 
             if (playlistUrl) {
                 this.playlistUrl = playlistUrl;
-                const subtitles = await this.loadMovieSubtitles(movie);
+                const subtitles = await this.loadMediaSubtitles(mediaType);
                 this.setupHLSPlayer(this.playlistUrl, true, subtitles);
 
                 // Hide the loading overlay after successful recovery
