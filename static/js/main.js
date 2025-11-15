@@ -361,8 +361,8 @@ class MediaLibraryApp {
 
         this.setupMediaPoster(
             "media-poster-container",
-            show.poster_path,
-            show.name
+            this.getTVShowPosterUrls(show).cdnPosterUrl,
+            show.name || "TV Show Poster"
         );
 
         setTimeout(() => {
@@ -411,17 +411,14 @@ class MediaLibraryApp {
 
     setupMediaPoster(containerID, posterPath, alt) {
         const posterContainer = document.getElementById(containerID);
-        if (posterContainer) {
-            posterContainer.innerHTML = ""; // Clear existing content
-        }
 
-        if (posterPath && posterPath.trim() != "") {
+        if (posterContainer && posterPath && posterPath.trim() != "") {
             // Clear any existing content in the poster container
             posterContainer.innerHTML = "";
 
             // Create the image element
             const posterImg = document.createElement("img");
-            posterImg.src = `${CONFIG.tmdbPosterUrlPrefix500}${posterPath}`;
+            posterImg.src = `${posterPath}`;
             posterImg.alt = alt;
             posterImg.style.width = "100%";
             posterImg.style.height = "auto";
@@ -566,24 +563,24 @@ class MediaLibraryApp {
         }
     }
 
-    updateTVShowDescriptionAndYearAndPoster(metadata) {
+    updateTVShowDescriptionAndYearAndPoster(show) {
         const descriptionParagraph =
             document.getElementById("tvshow-description");
         const yearText = document.getElementById("tvshow-year");
 
-        if (metadata && metadata.overview) {
-            descriptionParagraph.textContent = metadata.overview;
+        if (show && show.overview) {
+            descriptionParagraph.textContent = show.overview;
 
-            if (metadata.first_air_date) {
+            if (show.first_air_date) {
                 const releaseYear =
-                    metadata.first_air_date.substring(0, 4) || "Unknown";
+                    show.first_air_date.substring(0, 4) || "Unknown";
                 yearText.textContent = `${releaseYear}`;
             }
 
             this.setupMediaPoster(
                 "tvshow-poster-container",
-                metadata.poster_path,
-                metadata.name || "TV Show Poster"
+                this.getTVShowPosterUrls(this.currentTVShow).cdnPosterUrl,
+                show.name || "TV Show Poster"
             );
         } else {
             descriptionParagraph.textContent =
@@ -2054,7 +2051,7 @@ class MediaLibraryApp {
 
             this.setupMediaPoster(
                 "media-poster-container",
-                movieData.poster_path,
+                this.getMoviePosterUrls(this.currentMovie).cdnPosterUrl,
                 movieData.title || "Movie Poster"
             );
         } else {
