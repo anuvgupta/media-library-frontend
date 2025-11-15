@@ -102,14 +102,14 @@ class MediaLibraryApp {
                 this.showLibrariesView();
                 this.clearLibraryPageContent();
                 this.clearMediaPageContent();
-                this.updateMovieDescriptionAndYear();
+                this.updateMovieDescriptionAndYearAndPoster();
             });
         // document
         //     .getElementById("back-to-library-btn")
         //     .addEventListener("click", () => {
         //         this.showLibraryView(this.currentLibraryOwner);
         //         this.clearMediaPageContent();
-        //         this.updateMovieDescriptionAndYear();
+        //         this.updateMovieDescriptionAndYearAndPoster();
         //     });
 
         // Library sharing
@@ -292,6 +292,10 @@ class MediaLibraryApp {
             libraryOwner: this.currentLibraryOwner,
             movieId: movieId,
         });
+
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 50);
     }
 
     showTVShowView(show) {
@@ -314,6 +318,10 @@ class MediaLibraryApp {
 
         // Display seasons and episodes
         this.displaySeasonsAndEpisodes(show);
+
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 50);
     }
 
     showEpisodeView(show, seasonNum, episode) {
@@ -340,9 +348,6 @@ class MediaLibraryApp {
         // Update back button
         this.updateMediaBackButton("← Back to Show");
 
-        // Load episode metadata
-        this.loadEpisodeMetadata(show, seasonNum, episode);
-
         // Show play button instead of auto-loading video
         this.showPlayButton();
 
@@ -353,6 +358,16 @@ class MediaLibraryApp {
             season: seasonNum,
             episode: episode.episode,
         });
+
+        this.setupMediaPoster(
+            "media-poster-container",
+            show.poster_path,
+            show.name
+        );
+
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 50);
     }
 
     setupMovieMetadata(movie) {
@@ -367,12 +382,12 @@ class MediaLibraryApp {
             movie.runtime || "Unknown";
         document.getElementById("media-quality").textContent =
             movie.quality || "Unknown";
-
-        // Clear and setup poster container
-        this.setupMediaPoster("media-poster-container");
     }
 
     setupEpisodeMetadata(show, seasonNum, episode) {
+        // Clear description
+        this.updateEpisodeDescription(null);
+
         // Show episode metadata, hide movie metadata
         document.getElementById("movie-metadata").style.display = "none";
         document.getElementById("episode-metadata").style.display = "block";
@@ -392,15 +407,29 @@ class MediaLibraryApp {
             episode.runtime || "Unknown";
         document.getElementById("media-episode-quality").textContent =
             episode.quality || "Unknown";
-
-        // Clear and setup poster container
-        this.setupMediaPoster("media-poster-container");
     }
 
-    setupMediaPoster(containerID) {
+    setupMediaPoster(containerID, posterPath, alt) {
         const posterContainer = document.getElementById(containerID);
         if (posterContainer) {
             posterContainer.innerHTML = ""; // Clear existing content
+        }
+
+        if (posterPath && posterPath.trim() != "") {
+            // Clear any existing content in the poster container
+            posterContainer.innerHTML = "";
+
+            // Create the image element
+            const posterImg = document.createElement("img");
+            posterImg.src = `${CONFIG.tmdbPosterUrlPrefix500}${posterPath}`;
+            posterImg.alt = alt;
+            posterImg.style.width = "100%";
+            posterImg.style.height = "auto";
+            posterImg.style.objectFit = "contain";
+            posterImg.style.borderRadius = "4px";
+
+            // Append the image to the poster container
+            posterContainer.appendChild(posterImg);
         }
     }
 
@@ -529,26 +558,18 @@ class MediaLibraryApp {
                 show.poster_path = tvData.poster_path;
             }
 
-            this.updateTVShowDescription(tvData);
+            this.updateTVShowDescriptionAndYearAndPoster(tvData);
         } catch (error) {
             console.error("Error loading TV show metadata:", error);
             this.showStatus("Error loading TV show details: " + error.message);
-            this.updateTVShowDescription(null);
+            this.updateTVShowDescriptionAndYearAndPoster(null);
         }
     }
 
-    loadEpisodeMetadata(show, seasonNum, episode) {
-        // For now, just update with placeholder. Later we'll implement TMDB TV API calls
-        this.updateEpisodeDescription(null);
-    }
-
-    updateTVShowDescription(metadata) {
+    updateTVShowDescriptionAndYearAndPoster(metadata) {
         const descriptionParagraph =
             document.getElementById("tvshow-description");
         const yearText = document.getElementById("tvshow-year");
-        const posterContainer = document.getElementById(
-            "tvshow-poster-container"
-        );
 
         if (metadata && metadata.overview) {
             descriptionParagraph.textContent = metadata.overview;
@@ -559,22 +580,11 @@ class MediaLibraryApp {
                 yearText.textContent = `${releaseYear}`;
             }
 
-            if (metadata.poster_path) {
-                // Clear any existing content in the poster container
-                posterContainer.innerHTML = "";
-
-                // Create the image element
-                const posterImg = document.createElement("img");
-                posterImg.src = `${CONFIG.tmdbPosterUrlPrefix500}${metadata.poster_path}`;
-                posterImg.alt = metadata.name || "TV Show Poster";
-                posterImg.style.width = "100%";
-                posterImg.style.height = "auto";
-                posterImg.style.objectFit = "contain";
-                posterImg.style.borderRadius = "4px";
-
-                // Append the image to the poster container
-                posterContainer.appendChild(posterImg);
-            }
+            this.setupMediaPoster(
+                "tvshow-poster-container",
+                metadata.poster_path,
+                metadata.name || "TV Show Poster"
+            );
         } else {
             descriptionParagraph.textContent =
                 "No description available for this show.";
@@ -1992,11 +2002,11 @@ class MediaLibraryApp {
 
             const result = await response.json();
             console.log("Movie metadata:", result);
-            this.updateMovieDescriptionAndYear(result);
+            this.updateMovieDescriptionAndYearAndPoster(result);
         } catch (error) {
             console.error("Error loading movie metadata:", error);
             this.showStatus("Error loading movie details: " + error.message);
-            this.updateMovieDescriptionAndYear(null);
+            this.updateMovieDescriptionAndYearAndPoster(null);
         }
     }
 
@@ -2018,14 +2028,11 @@ class MediaLibraryApp {
         }
     }
 
-    updateMovieDescriptionAndYear(metadata) {
+    updateMovieDescriptionAndYearAndPoster(metadata) {
         // Find the description paragraph in the unified media view
         const descriptionParagraph =
             document.getElementById("media-description");
         const yearText = document.getElementById("media-year");
-        const posterContainer = document.getElementById(
-            "media-poster-container"
-        );
 
         if (metadata && metadata.results && metadata.results.length > 0) {
             // Get the first result from the API response
@@ -2045,22 +2052,11 @@ class MediaLibraryApp {
                 yearText.textContent = `${releaseYear}`;
             }
 
-            if (movieData.poster_path) {
-                // Clear any existing content in the poster container
-                posterContainer.innerHTML = "";
-
-                // Create the image element
-                const posterImg = document.createElement("img");
-                posterImg.src = `${CONFIG.tmdbPosterUrlPrefix500}${movieData.poster_path}`;
-                posterImg.alt = movieData.title || "Movie Poster";
-                posterImg.style.width = "100%";
-                posterImg.style.height = "auto";
-                posterImg.style.objectFit = "contain";
-                posterImg.style.borderRadius = "4px";
-
-                // Append the image to the poster container
-                posterContainer.appendChild(posterImg);
-            }
+            this.setupMediaPoster(
+                "media-poster-container",
+                movieData.poster_path,
+                movieData.title || "Movie Poster"
+            );
         } else {
             // Fallback if no results are available
             descriptionParagraph.textContent =
