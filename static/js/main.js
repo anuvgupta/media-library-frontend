@@ -2049,9 +2049,10 @@ class MediaLibraryApp {
             const mediaId = this.getMediaId(mediaType);
             const ownerIdentityId = this.currentLibraryOwner;
 
+            // CORRECTED: New route structure with /type/ and /id/ segments
             const response = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerIdentityId}/media/${mediaId}/subtitles?mediaType=${mediaType}`
+                `/libraries/${ownerIdentityId}/media/type/${mediaType}/id/${mediaId}/subtitles`
             );
 
             console.log("Loaded subtitles:", response.subtitles);
@@ -2281,9 +2282,10 @@ class MediaLibraryApp {
         }
 
         try {
+            // CORRECTED: New route structure with /type/ and /id/ segments
             const apiResponse = await this.makeAuthenticatedRequest(
                 "GET",
-                `/libraries/${ownerIdentityId}/media/${mediaId}/playlist?mediaType=${mediaType}`
+                `/libraries/${ownerIdentityId}/media/type/${mediaType}/id/${mediaId}/playlist`
             );
 
             // Extract the pre-signed URL from the response
@@ -2352,9 +2354,10 @@ class MediaLibraryApp {
             this.showVideoLoading(`Waiting for ${mediaLabel}...`);
 
             try {
+                // CORRECTED: New route structure with /type/ and /id/ segments
                 await this.makeAuthenticatedRequest(
                     "POST",
-                    `/libraries/${ownerIdentityId}/media/${mediaId}/request?mediaType=${mediaType}`
+                    `/libraries/${ownerIdentityId}/media/type/${mediaType}/id/${mediaId}/request`
                 );
                 console.log("Processing request sent");
 
@@ -3094,9 +3097,10 @@ class MediaLibraryApp {
                 errorData.details
             );
 
+            // CORRECTED: New route structure with /type/ and /id/ segments
             await this.makeAuthenticatedRequest(
                 "POST",
-                `/libraries/${ownerIdentityId}/media/${mediaId}/request?mediaType=${mediaType}`
+                `/libraries/${ownerIdentityId}/media/type/${mediaType}/id/${mediaId}/request`
             );
 
             this.showStatus(
@@ -3796,9 +3800,10 @@ class MediaLibraryApp {
 
         this.statusPollingInterval = setInterval(async () => {
             try {
+                // CORRECTED: New route structure with /type/ and /id/ segments
                 const statusResponse = await this.makeAuthenticatedRequest(
                     "GET",
-                    `/libraries/${ownerIdentityId}/media/${mediaId}/status?mediaType=${mediaType}`
+                    `/libraries/${ownerIdentityId}/media/type/${mediaType}/id/${mediaId}/status`
                 );
 
                 this.lastStatusResponse = statusResponse;
